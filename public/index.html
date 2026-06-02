@@ -97,7 +97,7 @@ body { font-family: 'Rubik','Segoe UI',sans-serif; background:#fff; color:var(--
 .sbov { position:absolute; inset:0; pointer-events:none; }
 .sbmask { position:absolute; top:0; bottom:0; background:rgba(0,0,0,.55); z-index:2; }
 .sbsel { position:absolute; top:0; bottom:0; border:2px solid #2962ff; z-index:3; pointer-events:none; }
-.sbh { position:absolute; top:0; bottom:0; width:14px; cursor:ew-resize; z-index:5; pointer-events:all; display:flex; align-items:center; justify-content:center; }
+.sbh { position:absolute; top:0; bottom:0; width:44px; cursor:ew-resize; z-index:5; pointer-events:all; display:flex; align-items:center; justify-content:center; }
 .sbhbar { width:4px; height:28px; background:#2962ff; border-radius:2px; }
 .sbhl { left:0; transform:translateX(-50%); }
 .sbhr { right:0; transform:translateX(50%); }
@@ -482,40 +482,54 @@ async function generateFrames() {
   videoEl.currentTime=0;
 }
 
-// SB drag — фикс: используем addEventListener вместо onmousedown/ontouchstart
+// SB drag — определяем ручку по близости к позиции start/end, не по elementFromPoint
 function sbOnStart(e) {
-  const touch=e.touches?.[0];
-  const tgt=touch?document.elementFromPoint(touch.clientX,touch.clientY):e.target;
-  const rect=sbEl.getBoundingClientRect();
-  const x=(touch?touch.clientX:e.clientX)-rect.left;
-  if(sbHL.contains(tgt)||tgt===sbHL||tgt.closest('.sbhl')) dragging='s';
-  else if(sbHR.contains(tgt)||tgt===sbHR||tgt.closest('.sbhr')) dragging='e';
-  else { videoEl.currentTime=clamp((x/rect.width)*videoDur,0,videoDur); updatePH(); return; }
-  e.preventDefault();
-  e.stopPropagation();
+  if(e.button !== undefined && e.button !== 0) return; // только левая кнопка мыши
+  const touch = e.touches?.[0];
+  const clientX = touch ? touch.clientX : e.clientX;
+  const rect = sbEl.getBoundingClientRect();
+  const x = clientX - rect.left;
+  const w = rect.width;
+  const posS = (startTime / videoDur) * w; // пиксельная позиция левой ручки
+  const posE = (endTime   / videoDur) * w; // пиксельная позиция правой ручки
+  const THRESH = 28; // px — зона захвата ручки
+  const dS = Math.abs(x - posS);
+  const dE = Math.abs(x - posE);
+  if (dS <= THRESH || dE <= THRESH) {
+    // хватаем ближайшую ручку
+    dragging = (dS <= dE) ? 's' : 'e';
+    e.preventDefault();
+    e.stopPropagation();
+  } else {
+    // клик по таймлайну — перемещаем playhead
+    videoEl.currentTime = clamp((x / w) * videoDur, 0, videoDur);
+    updatePH();
+  }
 }
-sbEl.addEventListener('mousedown', sbOnStart);
-sbEl.addEventListener('touchstart', sbOnStart, {passive:false});
+sbEl.addEventListener('mousedown',  sbOnStart);
+sbEl.addEventListener('touchstart', sbOnStart, {passive: false});
 
-const onMv=e=>{
-  if(!dragging) return;
+const onMv = e => {
+  if (!dragging) return;
   e.preventDefault();
-  const touch=e.touches?.[0];
-  const rect=sbEl.getBoundingClientRect();
-  const x=(touch?touch.clientX:e.clientX)-rect.left;
-  const p=clamp(x/rect.width,0,1);
-  const t=p*videoDur;
-  if(dragging==='s'){startTime=clamp(t,0,endTime-.1);videoEl.currentTime=startTime;}
-  else{endTime=clamp(t,startTime+.1,videoDur);videoEl.currentTime=endTime;}
+  const touch = e.touches?.[0];
+  const rect = sbEl.getBoundingClientRect();
+  const x = (touch ? touch.clientX : e.clientX) - rect.left;
+  const p = clamp(x / rect.width, 0, 1);
+  const t = p * videoDur;
+  if (dragging === 's') { startTime = clamp(t, 0, endTime - 0.1); videoEl.currentTime = startTime; }
+  else                  { endTime   = clamp(t, startTime + 0.1, videoDur); videoEl.currentTime = endTime; }
   updateSB();
-  sbHint.style.left=(p*100)+'%'; sbHint.textContent=fmtT(t); sbHint.style.display='block';
+  sbHint.style.left = (p * 100) + '%';
+  sbHint.textContent = fmtT(t);
+  sbHint.style.display = 'block';
 };
-const onUp=()=>{ if(!dragging) return; dragging=null; sbHint.style.display='none'; };
-document.addEventListener('mousemove',onMv,{passive:false});
-document.addEventListener('touchmove',onMv,{passive:false});
-document.addEventListener('mouseup',onUp);
-document.addEventListener('touchend',onUp);
-document.addEventListener('touchcancel',onUp);
+const onUp = () => { dragging = null; sbHint.style.display = 'none'; };
+document.addEventListener('mousemove',   onMv, {passive: false});
+document.addEventListener('touchmove',   onMv, {passive: false});
+document.addEventListener('mouseup',     onUp);
+document.addEventListener('touchend',    onUp);
+document.addEventListener('touchcancel', onUp);
 
 // ── SAVE via MediaRecorder ──
 G('btnSave').onclick = async () => {
@@ -713,61 +727,57 @@ G('btnSendTg').onclick = async () => {
   if(!outBlob) return;
   const btn = G('btnSendTg');
   btn.disabled = true;
-  btn.textContent = '⏳ Отправляем...';
-  try {
-    // Конвертируем blob в base64 и отправляем боту через sendData
-    // Бот получит сигнал, что нужно запросить файл (для больших файлов — URL)
-    // Для небольших файлов до ~50KB используем sendData напрямую
-    // Для больших — сначала загружаем на сервер, бот скачивает по URL
-    const MAX_DIRECT = 50 * 1024; // 50KB
-    if(outBlob.size <= MAX_DIRECT) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const b64 = reader.result.split(',')[1];
-        const ext = format;
-        tgApp.sendData(JSON.stringify({ type:'video', format:ext, data:b64 }));
-      };
-      reader.readAsDataURL(outBlob);
-    } else {
-      // Загружаем файл на сервер, бот скачает по outId
-      const fd = new FormData();
-      const fname = (videoFile?.name?.replace(/\.[^.]+$/,'')||'video')+'_cut.'+format;
-      fd.append('file', outBlob, fname);
-      G('ptitle').textContent = 'Загружаем на сервер...';
-      sp.style.display = 'flex'; sr.style.display = 'none';
-      G('pfill').style.width = '0%'; G('ppct').textContent = '0%';
+  btn.textContent = '⏳ Загружаем...';
 
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/api/upload');
-      xhr.upload.onprogress = ev => {
-        if(ev.lengthComputable) {
-          const pct = Math.round(ev.loaded/ev.total*100);
-          G('pfill').style.width = pct+'%'; G('ppct').textContent = pct+'%';
-        }
-      };
-      xhr.onload = () => {
+  try {
+    const fname = (videoFile?.name?.replace(/\.[^.]+$/,'')||'video')+'_cut.'+format;
+    const fd = new FormData();
+    fd.append('file', outBlob, fname);
+
+    // Показываем прогресс загрузки
+    sr.style.display = 'none';
+    sp.style.display = 'flex';
+    G('ptitle').textContent = 'Загружаем видео...';
+    G('psub').textContent = 'Подождите, файл отправляется боту';
+    G('pfill').style.width = '0%';
+    G('ppct').textContent = '0%';
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/upload');
+    xhr.upload.onprogress = ev => {
+      if (ev.lengthComputable) {
+        const pct = Math.round(ev.loaded / ev.total * 100);
+        G('pfill').style.width = pct + '%';
+        G('ppct').textContent = pct + '%';
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.status === 200) {
+        const resp = JSON.parse(xhr.responseText);
+        // Отправляем боту данные и закрываем Mini App — бот пришлёт видео
+        tgApp.sendData(JSON.stringify({
+          action: 'send_video',
+          fileId: resp.fileId,
+          format: format,
+          name: fname
+        }));
+        // sendData автоматически закрывает Mini App
+      } else {
         sp.style.display = 'none'; sr.style.display = 'flex';
-        if(xhr.status===200) {
-          try {
-            const resp = JSON.parse(xhr.responseText);
-            // Отправляем боту outId чтобы он скачал файл
-            tgApp.sendData(JSON.stringify({ type:'video_upload', fileId: resp.fileId, format, name: fname }));
-          } catch(e) { showErr('Ошибка разбора ответа сервера'); }
-        } else {
-          showErr('Ошибка загрузки на сервер');
-        }
+        showErr('Ошибка загрузки на сервер: ' + xhr.status);
         btn.disabled = false;
         btn.textContent = '📤 Отправить в Telegram';
-      };
-      xhr.onerror = () => {
-        sp.style.display = 'none'; sr.style.display = 'flex';
-        showErr('Ошибка сети при загрузке');
-        btn.disabled = false;
-        btn.textContent = '📤 Отправить в Telegram';
-      };
-      xhr.send(fd);
-    }
+      }
+    };
+    xhr.onerror = () => {
+      sp.style.display = 'none'; sr.style.display = 'flex';
+      showErr('Ошибка сети — проверьте соединение');
+      btn.disabled = false;
+      btn.textContent = '📤 Отправить в Telegram';
+    };
+    xhr.send(fd);
   } catch(e) {
+    sp.style.display = 'none'; sr.style.display = 'flex';
     showErr('Ошибка: ' + e.message);
     btn.disabled = false;
     btn.textContent = '📤 Отправить в Telegram';
