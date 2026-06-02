@@ -121,8 +121,8 @@ body { font-family: 'Rubik','Segoe UI',sans-serif; background:#fff; color:var(--
 .savebtn:disabled { opacity:.55; cursor:not-allowed; }
 
 /* PROGRESS OVERLAY */
-#stateProgress { display:none; position:fixed; inset:0; background:rgba(0,0,0,.75); backdrop-filter:blur(6px); z-index:500; align-items:center; justify-content:center; }
-.pbox { background:#fff; border-radius:16px; padding:32px 36px; text-align:center; max-width:340px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+#stateProgress { display:none; flex-direction:column; align-items:center; justify-content:center; flex:1; padding:40px 20px; }
+.pbox { background:#fff; border-radius:16px; padding:32px 36px; text-align:center; max-width:340px; width:90%; box-shadow:0 4px 24px rgba(0,0,0,.1); }
 .spinner { width:46px; height:46px; border:4px solid #e5e7eb; border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 14px; }
 @keyframes spin { to { transform:rotate(360deg); } }
 .ptitle { font-size:16px; font-weight:600; margin-bottom:4px; }
@@ -132,13 +132,14 @@ body { font-family: 'Rubik','Segoe UI',sans-serif; background:#fff; color:var(--
 .ppct { font-size:13px; color:var(--muted); }
 
 /* RESULT */
-#stateResult { display:none; position:fixed; inset:0; background:rgba(0,0,0,.75); backdrop-filter:blur(6px); z-index:500; align-items:center; justify-content:center; }
-.rbox { background:#fff; border-radius:16px; padding:32px 36px; text-align:center; max-width:340px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+#stateResult { display:none; flex-direction:column; align-items:center; justify-content:center; flex:1; padding:40px 20px; }
+.rbox { background:#fff; border-radius:16px; padding:32px 36px; text-align:center; max-width:340px; width:90%; box-shadow:0 4px 24px rgba(0,0,0,.1); }
 .ric { font-size:46px; margin-bottom:10px; }
 .rtitle { font-size:19px; font-weight:700; color:var(--success); margin-bottom:4px; }
 .rmeta { font-size:13px; color:var(--muted); margin-bottom:18px; }
 .dlbtn { width:100%; background:var(--success); border:none; border-radius:6px; padding:13px; color:#fff; font-size:15px; font-weight:600; font-family:inherit; cursor:pointer; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:6px; transition:background .2s; }
 .dlbtn:hover { background:#16a34a; }
+.dlbtn:disabled { opacity:.6; cursor:not-allowed; }
 .newbtn { width:100%; background:transparent; border:1px solid var(--border); border-radius:6px; padding:9px; color:var(--muted); font-size:13px; font-family:inherit; cursor:pointer; }
 .newbtn:hover { border-color:#999; color:var(--text); }
 
@@ -310,9 +311,8 @@ body { font-family: 'Rubik','Segoe UI',sans-serif; background:#fff; color:var(--
     <div class="ric">✅</div>
     <div class="rtitle">Готово!</div>
     <div class="rmeta" id="rmeta">—</div>
-    <button class="dlbtn" id="btnSendTg" style="background:#229ED9;display:none">📤 Отправить в Telegram</button>
+    <button class="dlbtn" id="btnSendTg" style="background:#229ED9">📤 Отправить в Telegram</button>
     <button class="dlbtn" id="btnDl">⬇️ Скачать видео</button>
-    <button class="dlbtn" id="btnPreview" style="background:#4b5563;margin-top:0">▶ Открыть в новой вкладке</button>
     <button class="newbtn" id="btnNew">+ Обрезать другое видео</button>
   </div>
 </div>
@@ -538,7 +538,7 @@ G('btnSave').onclick = async () => {
   // MediaRecorder не поддерживает invert-режим, поворот и скорость через seek
   // Используем Canvas + captureStream для применения трансформаций
 
-  se.style.display = 'none'; sp.style.display = 'flex';
+  se.style.display = 'none'; sp.style.display = 'flex'; sp.style.flexDirection = 'column';
   G('pfill').style.width = '0%'; G('ppct').textContent = '0%';
   G('ptitle').textContent = 'Обрабатываем видео...';
   G('psub').textContent = 'Запись фрагмента в браузере';
@@ -643,13 +643,17 @@ G('btnSave').onclick = async () => {
 
     G('pfill').style.width = '100%'; G('ppct').textContent = '100%';
     setTimeout(() => {
-      sp.style.display = 'none'; sr.style.display = 'flex';
+      sp.style.display = 'none';
+      se.style.display = 'none';
+      sr.style.display = 'flex';
+      sr.style.flexDirection = 'column';
       G('rmeta').textContent = `${fmtSz(outBlob.size)} · ${fmtT(totalDur / speed)} · ${ext.toUpperCase()}`;
       checkTgBtn();
     }, 300);
 
   } catch(e) {
-    sp.style.display = 'none'; se.style.display = 'flex'; se.style.flexDirection = 'column';
+    sp.style.display = 'none';
+    se.style.display = 'flex'; se.style.flexDirection = 'column';
     showErr('Ошибка: ' + e.message);
   }
 };
@@ -681,29 +685,15 @@ function waitUntil(video, targetTime, totalDur, pctFrom, pctTo) {
   });
 }
 
-// ── DOWNLOAD ──
+// ── СКАЧАТЬ ──
 G('btnDl').onclick = () => {
-  if(!outBlob) { showErr('Файл не найден, обработайте видео заново'); return; }
-  try {
-    const url = URL.createObjectURL(outBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = (videoFile?.name?.replace(/\.[^.]+$/, '') || 'video') + '_cut.' + format;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    // Освобождаем память через секунду
-    setTimeout(() => { URL.revokeObjectURL(url); document.body.removeChild(a); }, 1000);
-  } catch(e) {
-    showErr('Ошибка скачивания: ' + e.message);
-  }
-};
-
-// ── PREVIEW (fallback for Telegram WebView) ──
-G('btnPreview').onclick = () => {
-  if(!outBlob) { showErr('Файл не найден, обработайте видео заново'); return; }
+  if (!outBlob) { showErr('Файл не найден, обработайте видео заново'); return; }
   const url = URL.createObjectURL(outBlob);
-  window.open(url, '_blank');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (videoFile?.name?.replace(/\.[^.]+$/, '') || 'video') + '_cut.' + format;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); document.body.removeChild(a); }, 1000);
 };
 
 G('btnNew').onclick = () => {
@@ -714,70 +704,77 @@ G('btnNew').onclick = () => {
 
 // Telegram
 const tgApp = window.Telegram?.WebApp;
-if(tgApp){ tgApp.ready(); tgApp.expand(); }
+if (tgApp) { tgApp.ready(); tgApp.expand(); }
 
-// Показываем кнопку отправки в Telegram если запущено внутри WebApp
 function checkTgBtn() {
-  if(tgApp && outBlob) {
-    G('btnSendTg').style.display = '';
-  }
+  // Кнопка всегда видна — ничего не делаем, она уже в HTML
 }
 
+// ── ОТПРАВИТЬ В TELEGRAM ──
 G('btnSendTg').onclick = async () => {
-  if(!outBlob) return;
+  if (!outBlob) { showErr('Файл не найден, обработайте видео заново'); return; }
+
   const btn = G('btnSendTg');
   btn.disabled = true;
   btn.textContent = '⏳ Загружаем...';
 
+  const fname = (videoFile?.name?.replace(/\.[^.]+$/, '') || 'video') + '_cut.' + format;
+
   try {
-    const fname = (videoFile?.name?.replace(/\.[^.]+$/,'')||'video')+'_cut.'+format;
+    // Загружаем файл на сервер
     const fd = new FormData();
     fd.append('file', outBlob, fname);
 
-    // Показываем прогресс загрузки
     sr.style.display = 'none';
-    sp.style.display = 'flex';
+    sp.style.display = 'flex'; sp.style.flexDirection = 'column';
     G('ptitle').textContent = 'Загружаем видео...';
-    G('psub').textContent = 'Подождите, файл отправляется боту';
+    G('psub').textContent = 'Файл отправляется на сервер';
     G('pfill').style.width = '0%';
     G('ppct').textContent = '0%';
 
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/upload');
-    xhr.upload.onprogress = ev => {
-      if (ev.lengthComputable) {
-        const pct = Math.round(ev.loaded / ev.total * 100);
-        G('pfill').style.width = pct + '%';
-        G('ppct').textContent = pct + '%';
-      }
-    };
-    xhr.onload = () => {
-      if (xhr.status === 200) {
-        const resp = JSON.parse(xhr.responseText);
-        // Отправляем боту данные и закрываем Mini App — бот пришлёт видео
-        tgApp.sendData(JSON.stringify({
-          action: 'send_video',
-          fileId: resp.fileId,
-          format: format,
-          name: fname
-        }));
-        // sendData автоматически закрывает Mini App
-      } else {
-        sp.style.display = 'none'; sr.style.display = 'flex';
-        showErr('Ошибка загрузки на сервер: ' + xhr.status);
-        btn.disabled = false;
-        btn.textContent = '📤 Отправить в Telegram';
-      }
-    };
-    xhr.onerror = () => {
-      sp.style.display = 'none'; sr.style.display = 'flex';
-      showErr('Ошибка сети — проверьте соединение');
+    const resp = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/upload');
+      xhr.upload.onprogress = ev => {
+        if (ev.lengthComputable) {
+          const pct = Math.round(ev.loaded / ev.total * 100);
+          G('pfill').style.width = pct + '%';
+          G('ppct').textContent = pct + '%';
+        }
+      };
+      xhr.onload = () => {
+        if (xhr.status === 200) resolve(JSON.parse(xhr.responseText));
+        else reject(new Error('HTTP ' + xhr.status));
+      };
+      xhr.onerror = () => reject(new Error('Ошибка сети'));
+      xhr.send(fd);
+    });
+
+    if (tgApp) {
+      // Запущено внутри Telegram — отправляем данные боту и закрываем
+      tgApp.sendData(JSON.stringify({
+        action: 'send_video',
+        fileId: resp.fileId,
+        format: format,
+        name: fname
+      }));
+      // sendData закрывает Mini App автоматически
+    } else {
+      // Запущено в браузере — просто скачиваем
+      sp.style.display = 'none';
+      sr.style.display = 'flex'; sr.style.flexDirection = 'column';
+      const url = URL.createObjectURL(outBlob);
+      const a = document.createElement('a');
+      a.href = url; a.download = fname;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(url); document.body.removeChild(a); }, 1000);
       btn.disabled = false;
       btn.textContent = '📤 Отправить в Telegram';
-    };
-    xhr.send(fd);
-  } catch(e) {
-    sp.style.display = 'none'; sr.style.display = 'flex';
+    }
+
+  } catch (e) {
+    sp.style.display = 'none';
+    sr.style.display = 'flex'; sr.style.flexDirection = 'column';
     showErr('Ошибка: ' + e.message);
     btn.disabled = false;
     btn.textContent = '📤 Отправить в Telegram';
