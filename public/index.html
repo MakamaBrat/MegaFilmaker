@@ -310,6 +310,7 @@ body { font-family: 'Rubik','Segoe UI',sans-serif; background:#fff; color:var(--
     <div class="ric">✅</div>
     <div class="rtitle">Готово!</div>
     <div class="rmeta" id="rmeta">—</div>
+    <button class="dlbtn" id="btnSendTg" style="background:#229ED9;display:none">📤 Отправить в Telegram</button>
     <button class="dlbtn" id="btnDl">⬇️ Скачать видео</button>
     <button class="dlbtn" id="btnPreview" style="background:#4b5563;margin-top:0">▶ Открыть в новой вкладке</button>
     <button class="newbtn" id="btnNew">+ Обрезать другое видео</button>
@@ -481,25 +482,40 @@ async function generateFrames() {
   videoEl.currentTime=0;
 }
 
-// SB drag
-sbEl.onmousedown = sbEl.ontouchstart = e => {
+// SB drag — фикс: используем addEventListener вместо onmousedown/ontouchstart
+function sbOnStart(e) {
   const touch=e.touches?.[0];
   const tgt=touch?document.elementFromPoint(touch.clientX,touch.clientY):e.target;
   const rect=sbEl.getBoundingClientRect();
   const x=(touch?touch.clientX:e.clientX)-rect.left;
-  if(sbHL.contains(tgt)||tgt===sbHL) dragging='s';
-  else if(sbHR.contains(tgt)||tgt===sbHR) dragging='e';
+  if(sbHL.contains(tgt)||tgt===sbHL||tgt.closest('.sbhl')) dragging='s';
+  else if(sbHR.contains(tgt)||tgt===sbHR||tgt.closest('.sbhr')) dragging='e';
   else { videoEl.currentTime=clamp((x/rect.width)*videoDur,0,videoDur); updatePH(); return; }
   e.preventDefault();
-};
-const onMv=e=>{ if(!dragging) return; const touch=e.touches?.[0]; const rect=sbEl.getBoundingClientRect(); const x=(touch?touch.clientX:e.clientX)-rect.left; const p=clamp(x/rect.width,0,1); const t=p*videoDur;
+  e.stopPropagation();
+}
+sbEl.addEventListener('mousedown', sbOnStart);
+sbEl.addEventListener('touchstart', sbOnStart, {passive:false});
+
+const onMv=e=>{
+  if(!dragging) return;
+  e.preventDefault();
+  const touch=e.touches?.[0];
+  const rect=sbEl.getBoundingClientRect();
+  const x=(touch?touch.clientX:e.clientX)-rect.left;
+  const p=clamp(x/rect.width,0,1);
+  const t=p*videoDur;
   if(dragging==='s'){startTime=clamp(t,0,endTime-.1);videoEl.currentTime=startTime;}
   else{endTime=clamp(t,startTime+.1,videoDur);videoEl.currentTime=endTime;}
-  updateSB(); sbHint.style.left=(p*100)+'%'; sbHint.textContent=fmtT(t); sbHint.style.display='block';
+  updateSB();
+  sbHint.style.left=(p*100)+'%'; sbHint.textContent=fmtT(t); sbHint.style.display='block';
 };
-const onUp=()=>{ dragging=null; sbHint.style.display='none'; };
-document.addEventListener('mousemove',onMv); document.addEventListener('touchmove',onMv,{passive:false});
-document.addEventListener('mouseup',onUp); document.addEventListener('touchend',onUp);
+const onUp=()=>{ if(!dragging) return; dragging=null; sbHint.style.display='none'; };
+document.addEventListener('mousemove',onMv,{passive:false});
+document.addEventListener('touchmove',onMv,{passive:false});
+document.addEventListener('mouseup',onUp);
+document.addEventListener('touchend',onUp);
+document.addEventListener('touchcancel',onUp);
 
 // ── SAVE via MediaRecorder ──
 G('btnSave').onclick = async () => {
@@ -615,6 +631,7 @@ G('btnSave').onclick = async () => {
     setTimeout(() => {
       sp.style.display = 'none'; sr.style.display = 'flex';
       G('rmeta').textContent = `${fmtSz(outBlob.size)} · ${fmtT(totalDur / speed)} · ${ext.toUpperCase()}`;
+      checkTgBtn();
     }, 300);
 
   } catch(e) {
@@ -682,7 +699,80 @@ G('btnNew').onclick = () => {
 };
 
 // Telegram
-if(window.Telegram?.WebApp){ window.Telegram.WebApp.ready(); window.Telegram.WebApp.expand(); }
+const tgApp = window.Telegram?.WebApp;
+if(tgApp){ tgApp.ready(); tgApp.expand(); }
+
+// Показываем кнопку отправки в Telegram если запущено внутри WebApp
+function checkTgBtn() {
+  if(tgApp && outBlob) {
+    G('btnSendTg').style.display = '';
+  }
+}
+
+G('btnSendTg').onclick = async () => {
+  if(!outBlob) return;
+  const btn = G('btnSendTg');
+  btn.disabled = true;
+  btn.textContent = '⏳ Отправляем...';
+  try {
+    // Конвертируем blob в base64 и отправляем боту через sendData
+    // Бот получит сигнал, что нужно запросить файл (для больших файлов — URL)
+    // Для небольших файлов до ~50KB используем sendData напрямую
+    // Для больших — сначала загружаем на сервер, бот скачивает по URL
+    const MAX_DIRECT = 50 * 1024; // 50KB
+    if(outBlob.size <= MAX_DIRECT) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const b64 = reader.result.split(',')[1];
+        const ext = format;
+        tgApp.sendData(JSON.stringify({ type:'video', format:ext, data:b64 }));
+      };
+      reader.readAsDataURL(outBlob);
+    } else {
+      // Загружаем файл на сервер, бот скачает по outId
+      const fd = new FormData();
+      const fname = (videoFile?.name?.replace(/\.[^.]+$/,'')||'video')+'_cut.'+format;
+      fd.append('file', outBlob, fname);
+      G('ptitle').textContent = 'Загружаем на сервер...';
+      sp.style.display = 'flex'; sr.style.display = 'none';
+      G('pfill').style.width = '0%'; G('ppct').textContent = '0%';
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/upload');
+      xhr.upload.onprogress = ev => {
+        if(ev.lengthComputable) {
+          const pct = Math.round(ev.loaded/ev.total*100);
+          G('pfill').style.width = pct+'%'; G('ppct').textContent = pct+'%';
+        }
+      };
+      xhr.onload = () => {
+        sp.style.display = 'none'; sr.style.display = 'flex';
+        if(xhr.status===200) {
+          try {
+            const resp = JSON.parse(xhr.responseText);
+            // Отправляем боту outId чтобы он скачал файл
+            tgApp.sendData(JSON.stringify({ type:'video_upload', fileId: resp.fileId, format, name: fname }));
+          } catch(e) { showErr('Ошибка разбора ответа сервера'); }
+        } else {
+          showErr('Ошибка загрузки на сервер');
+        }
+        btn.disabled = false;
+        btn.textContent = '📤 Отправить в Telegram';
+      };
+      xhr.onerror = () => {
+        sp.style.display = 'none'; sr.style.display = 'flex';
+        showErr('Ошибка сети при загрузке');
+        btn.disabled = false;
+        btn.textContent = '📤 Отправить в Telegram';
+      };
+      xhr.send(fd);
+    }
+  } catch(e) {
+    showErr('Ошибка: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = '📤 Отправить в Telegram';
+  }
+};
 window.addEventListener('resize',()=>{ if(videoDur) updateSB(); });
 </script>
 
