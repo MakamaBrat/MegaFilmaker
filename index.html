@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Обрезать видео онлайн</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --accent: #2962ff;
+  --accent-h: #1a4fd8;
+  --text: #1a1a1a;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --success: #22c55e;
+  --danger: #ef4444;
+}
+body { font-family: 'Rubik','Segoe UI',sans-serif; background:#fff; color:var(--text); font-size:13px; font-weight:300; min-height:100vh; display:flex; flex-direction:column; }
+
+/* HEADER */
+.header { background:#101114; height:52px; display:flex; align-items:center; padding:0 16px; gap:10px; flex-shrink:0; }
+.logo { color:#fff; font-size:15px; font-weight:600; text-decoration:none; display:flex; align-items:center; gap:8px; }
+.logo-ic { background:var(--accent); border-radius:6px; width:28px; height:28px; display:flex; align-items:center; justify-content:center; font-size:14px; }
+.tg-badge { margin-left:auto; background:rgba(41,98,255,.2); color:#7baeff; border:1px solid rgba(41,98,255,.35); border-radius:20px; padding:3px 10px; font-size:11px; }
+
+/* UPLOAD */
+#stateUpload { max-width:540px; margin:0 auto; padding:0 16px 40px; width:100%; }
+.app-title { text-align:center; padding:28px 16px 20px; }
+.app-title h1 { font-size:26px; font-weight:700; margin-bottom:6px; }
+.app-title h2 { font-size:14px; color:var(--muted); font-weight:300; }
+.upload-area { border:2px dashed #d1d5db; border-radius:12px; background:#fafafa; text-align:center; padding:44px 24px; cursor:pointer; transition:all .2s; }
+.upload-area:hover, .upload-area.drag { border-color:var(--accent); background:rgba(41,98,255,.03); }
+.upload-btn { display:inline-flex; align-items:center; gap:8px; background:var(--accent); color:#fff; border:none; border-radius:6px; padding:13px 30px; font-size:16px; font-weight:500; cursor:pointer; font-family:inherit; margin-top:18px; transition:background .2s; }
+.upload-btn:hover { background:var(--accent-h); }
+.drop-hint { margin-top:12px; color:var(--muted); font-size:13px; }
+.fmt-tags { display:flex; flex-wrap:wrap; gap:5px; justify-content:center; margin-top:14px; }
+.fmt-tag { background:#f3f4f6; border:1px solid var(--border); border-radius:4px; padding:3px 8px; font-size:11px; color:var(--muted); }
+#fileInput { display:none; }
+
+/* EDITOR */
+#stateEditor { display:none; flex:1; flex-direction:column; }
+
+/* TOOLBAR */
+.toolbar { background:#f8f8f8; border-bottom:1px solid #e0e0e0; display:flex; align-items:center; padding:0 8px; height:46px; overflow-x:auto; scrollbar-width:none; flex-shrink:0; gap:2px; }
+.toolbar::-webkit-scrollbar { display:none; }
+.tool-tab { display:flex; align-items:center; gap:5px; padding:6px 10px; border-radius:6px; border:none; background:transparent; color:var(--text); font-size:12px; font-family:inherit; cursor:pointer; white-space:nowrap; transition:all .15s; }
+.tool-tab:hover { background:rgba(0,0,0,.05); }
+.tool-tab.active { background:rgba(41,98,255,.1); color:var(--accent); }
+.tsep { width:1px; height:22px; background:var(--border); margin:0 4px; }
+.tr { margin-left:auto; display:flex; gap:5px; }
+.tbtn { background:transparent; border:1px solid var(--border); color:var(--muted); border-radius:5px; padding:4px 9px; font-size:12px; cursor:pointer; font-family:inherit; }
+.tbtn:hover { border-color:#999; color:var(--text); }
+
+/* VIDEO */
+.ebody { display:flex; flex:1; min-height:0; }
+.vwrap { flex:1; background:#1a1a1a; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; min-height:200px; }
+#videoEl { max-width:100%; max-height:100%; display:block; }
+.play-ov { position:absolute; width:52px; height:52px; background:rgba(255,255,255,.15); backdrop-filter:blur(4px); border-radius:50%; border:none; color:#fff; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .2s; }
+.vwrap:hover .play-ov { opacity:1; }
+
+/* SIDE */
+.side { width:210px; flex-shrink:0; border-left:1px solid var(--border); background:#fff; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:14px; }
+.stitle { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:8px; }
+.tfgrid { display:grid; grid-template-columns:1fr 1fr; gap:5px; }
+.tfbtn { background:#f9fafb; border:1px solid var(--border); border-radius:6px; padding:9px 5px; font-family:inherit; font-size:11px; color:var(--text); cursor:pointer; text-align:center; display:flex; flex-direction:column; align-items:center; gap:3px; transition:all .15s; }
+.tfbtn:hover { border-color:var(--accent); }
+.tfbtn.on { border-color:var(--accent); color:var(--accent); background:rgba(41,98,255,.06); }
+.tfbtn .ic { font-size:18px; line-height:1; }
+.tfbtn .lb { font-size:10px; color:var(--muted); }
+.tfbtn.on .lb { color:var(--accent); }
+.spgrid { display:flex; flex-wrap:wrap; gap:4px; }
+.spbtn { flex:1; min-width:38px; background:#f9fafb; border:1px solid var(--border); border-radius:5px; padding:7px 3px; font-size:12px; font-weight:600; text-align:center; cursor:pointer; font-family:inherit; transition:all .15s; }
+.spbtn:hover { border-color:#f59e0b; }
+.spbtn.on { background:rgba(245,158,11,.1); border-color:#f59e0b; color:#b45309; }
+.fmgrid { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:8px; }
+.fmbtn { flex:1; min-width:36px; background:#f9fafb; border:1px solid var(--border); border-radius:5px; padding:6px 3px; font-size:12px; font-weight:700; text-align:center; cursor:pointer; font-family:inherit; transition:all .15s; }
+.fmbtn:hover, .fmbtn.on { background:rgba(41,98,255,.07); border-color:var(--accent); color:var(--accent); }
+.qlrow { display:flex; gap:4px; }
+.qlbtn { flex:1; background:#f9fafb; border:1px solid var(--border); border-radius:5px; padding:5px 3px; font-size:11px; text-align:center; cursor:pointer; font-family:inherit; transition:all .15s; }
+.qlbtn.on { background:rgba(34,197,94,.08); border-color:var(--success); color:#15803d; }
+
+/* BOTTOM NAV */
+.bnav { background:#fff; border-top:1px solid var(--border); padding:9px 12px; flex-shrink:0; }
+.fbar { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.fname { font-size:12px; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fmeta { font-size:11px; color:var(--muted); white-space:nowrap; }
+.chbtn { background:transparent; border:1px solid var(--border); border-radius:4px; padding:3px 7px; font-size:11px; cursor:pointer; color:var(--muted); }
+.chbtn:hover { border-color:#999; color:var(--text); }
+
+/* STORYBOARD */
+.sb { position:relative; height:50px; background:#2a2a2a; border-radius:4px; overflow:hidden; cursor:crosshair; margin-bottom:8px; display:flex; }
+.sbframes { display:flex; height:50px; flex:1; overflow:hidden; }
+.sbframe { flex-shrink:0; height:50px; overflow:hidden; background:#333; border-right:1px solid rgba(0,0,0,.3); }
+.sbframe img { width:100%; height:50px; object-fit:cover; display:block; }
+.sbframe.ld { animation:pulse 1.2s infinite; }
+@keyframes pulse { 0%,100%{opacity:.5} 50%{opacity:.9} }
+.sbov { position:absolute; inset:0; pointer-events:none; }
+.sbmask { position:absolute; top:0; bottom:0; background:rgba(0,0,0,.55); z-index:2; }
+.sbsel { position:absolute; top:0; bottom:0; border:2px solid #2962ff; z-index:3; pointer-events:none; }
+.sbh { position:absolute; top:0; bottom:0; width:14px; cursor:ew-resize; z-index:5; pointer-events:all; display:flex; align-items:center; justify-content:center; }
+.sbhbar { width:4px; height:28px; background:#2962ff; border-radius:2px; }
+.sbhl { left:0; transform:translateX(-50%); }
+.sbhr { right:0; transform:translateX(50%); }
+.sbph { position:absolute; top:0; bottom:0; width:2px; background:#fff; z-index:4; pointer-events:none; }
+.sbhint { position:absolute; top:-24px; background:rgba(0,0,0,.7); color:#fff; border-radius:4px; padding:2px 6px; font-size:11px; transform:translateX(-50%); pointer-events:none; white-space:nowrap; display:none; z-index:10; }
+
+/* CONTROLS */
+.crow { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+.pbtn { width:34px; height:34px; background:#f3f4f6; border:1px solid var(--border); border-radius:50%; cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .15s; }
+.pbtn:hover { background:var(--border); }
+.tstepper { display:flex; align-items:center; gap:1px; background:#f9fafb; border:1px solid var(--border); border-radius:5px; padding:4px 7px; font-size:14px; font-variant-numeric:tabular-nums; }
+.tinp { background:transparent; border:none; outline:none; width:22px; text-align:center; font-family:inherit; font-size:14px; color:var(--text); }
+.tsep2 { color:#aaa; font-size:12px; }
+.dash { color:var(--muted); margin:0 2px; }
+.invbtn { background:#f9fafb; border:1px solid var(--border); border-radius:5px; padding:5px 9px; font-size:12px; cursor:pointer; font-family:inherit; color:var(--muted); transition:all .15s; }
+.invbtn:hover { border-color:#999; color:var(--text); }
+.invbtn.on { background:rgba(245,158,11,.1); border-color:#f59e0b; color:#b45309; }
+.durb { background:var(--accent); color:#fff; border-radius:12px; padding:3px 10px; font-size:12px; font-weight:500; margin-left:auto; }
+.savebtn { background:var(--accent); color:#fff; border:none; border-radius:5px; padding:9px 20px; font-size:14px; font-weight:500; font-family:inherit; cursor:pointer; transition:background .2s; white-space:nowrap; }
+.savebtn:hover { background:var(--accent-h); }
+.savebtn:disabled { opacity:.55; cursor:not-allowed; }
+
+/* PROGRESS OVERLAY */
+#stateProgress { display:none; position:fixed; inset:0; background:rgba(0,0,0,.75); backdrop-filter:blur(6px); z-index:500; align-items:center; justify-content:center; }
+.pbox { background:#fff; border-radius:16px; padding:32px 36px; text-align:center; max-width:340px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+.spinner { width:46px; height:46px; border:4px solid #e5e7eb; border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 14px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.ptitle { font-size:16px; font-weight:600; margin-bottom:4px; }
+.psub { font-size:13px; color:var(--muted); margin-bottom:14px; }
+.pbar { height:6px; background:#e5e7eb; border-radius:3px; overflow:hidden; margin-bottom:5px; }
+.pfill { height:100%; background:var(--accent); border-radius:3px; transition:width .3s; width:0%; }
+.ppct { font-size:13px; color:var(--muted); }
+
+/* RESULT */
+#stateResult { display:none; position:fixed; inset:0; background:rgba(0,0,0,.75); backdrop-filter:blur(6px); z-index:500; align-items:center; justify-content:center; }
+.rbox { background:#fff; border-radius:16px; padding:32px 36px; text-align:center; max-width:340px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+.ric { font-size:46px; margin-bottom:10px; }
+.rtitle { font-size:19px; font-weight:700; color:var(--success); margin-bottom:4px; }
+.rmeta { font-size:13px; color:var(--muted); margin-bottom:18px; }
+.dlbtn { width:100%; background:var(--success); border:none; border-radius:6px; padding:13px; color:#fff; font-size:15px; font-weight:600; font-family:inherit; cursor:pointer; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:6px; transition:background .2s; }
+.dlbtn:hover { background:#16a34a; }
+.newbtn { width:100%; background:transparent; border:1px solid var(--border); border-radius:6px; padding:9px; color:var(--muted); font-size:13px; font-family:inherit; cursor:pointer; }
+.newbtn:hover { border-color:#999; color:var(--text); }
+
+/* FFMPEG LOADING */
+#stateFfmpeg { display:none; position:fixed; inset:0; background:rgba(0,0,0,.9); z-index:1000; flex-direction:column; align-items:center; justify-content:center; gap:14px; color:#fff; }
+#stateFfmpeg .ptitle { color:#fff; }
+#stateFfmpeg .psub { color:#9ca3af; }
+
+/* ERROR */
+.errtoast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#fef2f2; border:1px solid #fca5a5; color:var(--danger); border-radius:8px; padding:10px 16px; font-size:13px; z-index:2000; display:none; max-width:90vw; text-align:center; box-shadow:0 4px 12px rgba(0,0,0,.1); }
+.errtoast.show { display:block; }
+
+@media (max-width:600px) {
+  .side { display:none; }
+  .durb { display:none; }
+  .app-title h1 { font-size:22px; }
+}
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+  <a href="#" class="logo"><div class="logo-ic">✂️</div>ВидеоРез</a>
+  <span class="tg-badge">Telegram Mini App</span>
+</header>
+
+<!-- UPLOAD -->
+<div id="stateUpload">
+  <div class="app-title">
+    <h1>Обрезать видео</h1>
+    <h2>Обрезать или вырезать фрагмент из видео любого формата</h2>
+  </div>
+  <div class="upload-area" id="uploadArea">
+    <div style="font-size:50px;margin-bottom:6px">🎬</div>
+    <div style="font-size:15px;font-weight:500;margin-bottom:6px">Выберите файл</div>
+    <div style="font-size:13px;color:#6b7280">Всё обрабатывается прямо в браузере — файл не покидает устройство</div>
+    <button class="upload-btn" id="btnOpen">📁 Выбрать файл</button>
+    <div class="drop-hint">или перетащите файл сюда</div>
+    <div class="fmt-tags">
+      <span class="fmt-tag">MP4</span><span class="fmt-tag">MOV</span><span class="fmt-tag">AVI</span>
+      <span class="fmt-tag">MKV</span><span class="fmt-tag">WEBM</span><span class="fmt-tag">3GP</span>
+    </div>
+    <input type="file" id="fileInput" accept="video/*">
+  </div>
+</div>
+
+<!-- EDITOR -->
+<div id="stateEditor">
+  <div class="toolbar">
+    <button class="tool-tab active" data-tool="cut">✂️ Обрезка</button>
+    <button class="tool-tab" data-tool="rotate">🔄 Повернуть</button>
+    <div class="tsep"></div>
+    <button class="tool-tab" data-tool="speed">⚡ Скорость</button>
+    <button class="tool-tab" data-tool="format">📦 Формат</button>
+    <div class="tr">
+      <button class="tbtn" id="btnReset">Сбросить</button>
+    </div>
+  </div>
+
+  <div class="ebody">
+    <div class="vwrap">
+      <video id="videoEl" preload="metadata" playsinline></video>
+      <button class="play-ov" id="btnPlayOv">▶</button>
+    </div>
+    <div class="side">
+      <!-- cut -->
+      <div id="panelCut">
+        <div class="stitle">✂️ Обрезка</div>
+        <p style="font-size:11px;color:#6b7280;line-height:1.6">Перетащите маркеры на таймлайне чтобы выбрать нужный фрагмент.</p>
+      </div>
+      <!-- rotate -->
+      <div id="panelRotate" style="display:none">
+        <div class="stitle">🔄 Поворот и отражение</div>
+        <div class="tfgrid">
+          <button class="tfbtn" id="btnR90"><span class="ic">↻</span><span class="lb">90°</span></button>
+          <button class="tfbtn" id="btnR180"><span class="ic">↺</span><span class="lb">180°</span></button>
+          <button class="tfbtn" id="btnFlipH"><span class="ic">⇔</span><span class="lb">Горизонталь</span></button>
+          <button class="tfbtn" id="btnFlipV"><span class="ic">⇕</span><span class="lb">Вертикаль</span></button>
+        </div>
+      </div>
+      <!-- speed -->
+      <div id="panelSpeed" style="display:none">
+        <div class="stitle">⚡ Скорость</div>
+        <div class="spgrid">
+          <button class="spbtn" data-sp="0.5">0.5×</button>
+          <button class="spbtn" data-sp="0.75">0.75×</button>
+          <button class="spbtn on" data-sp="1">1×</button>
+          <button class="spbtn" data-sp="1.5">1.5×</button>
+          <button class="spbtn" data-sp="2">2×</button>
+        </div>
+      </div>
+      <!-- format -->
+      <div id="panelFormat" style="display:none">
+        <div class="stitle">📦 Формат</div>
+        <div class="fmgrid">
+          <button class="fmbtn on" data-fmt="mp4">MP4</button>
+          <button class="fmbtn" data-fmt="webm">WEBM</button>
+          <button class="fmbtn" data-fmt="mov">MOV</button>
+          <button class="fmbtn" data-fmt="gif">GIF</button>
+        </div>
+        <div class="stitle" style="margin-top:10px">🎨 Качество</div>
+        <div class="qlrow">
+          <button class="qlbtn" data-q="low">Низкое</button>
+          <button class="qlbtn on" data-q="medium">Среднее</button>
+          <button class="qlbtn" data-q="high">Высокое</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bnav">
+    <div class="fbar">
+      <span class="fname" id="infoName">—</span>
+      <span class="fmeta" id="infoMeta">—</span>
+      <button class="chbtn" id="btnChange">Сменить</button>
+    </div>
+    <!-- Storyboard -->
+    <div class="sb" id="sb">
+      <div class="sbframes" id="sbFrames"></div>
+      <div class="sbov">
+        <div class="sbmask" id="sbML" style="left:0"></div>
+        <div class="sbmask" id="sbMR" style="right:0"></div>
+        <div class="sbsel" id="sbSel"></div>
+        <div class="sbh sbhl" id="sbHL"><div class="sbhbar"></div></div>
+        <div class="sbh sbhr" id="sbHR"><div class="sbhbar"></div></div>
+        <div class="sbph" id="sbPH"></div>
+        <div class="sbhint" id="sbHint"></div>
+      </div>
+    </div>
+    <!-- Controls row -->
+    <div class="crow">
+      <button class="pbtn" id="btnPlay">▶</button>
+      <div class="tstepper">
+        <input class="tinp" id="m1" value="00" maxlength="2">
+        <span class="tsep2">:</span>
+        <input class="tinp" id="s1" value="00" maxlength="2">
+        <span class="tsep2">.</span>
+        <input class="tinp" id="f1" value="0" maxlength="1" style="width:14px">
+      </div>
+      <span class="dash">—</span>
+      <div class="tstepper">
+        <input class="tinp" id="m2" value="00" maxlength="2">
+        <span class="tsep2">:</span>
+        <input class="tinp" id="s2" value="00" maxlength="2">
+        <span class="tsep2">.</span>
+        <input class="tinp" id="f2" value="0" maxlength="1" style="width:14px">
+      </div>
+      <button class="invbtn" id="btnInvert">⇄ Вырезать</button>
+      <span class="durb" id="durb">0:00</span>
+      <div style="margin-left:auto">
+        <button class="savebtn" id="btnSave">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FFMPEG LOADING -->
+<div id="stateFfmpeg">
+  <div class="spinner"></div>
+  <div class="ptitle">Загружаем FFmpeg...</div>
+  <div class="psub">~25 МБ, только один раз</div>
+</div>
+
+<!-- PROGRESS -->
+<div id="stateProgress">
+  <div class="pbox">
+    <div class="spinner"></div>
+    <div class="ptitle" id="ptitle">Обрабатываем...</div>
+    <div class="psub" id="psub">FFmpeg работает в браузере</div>
+    <div class="pbar"><div class="pfill" id="pfill"></div></div>
+    <div class="ppct" id="ppct">0%</div>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div id="stateResult">
+  <div class="rbox">
+    <div class="ric">✅</div>
+    <div class="rtitle">Готово!</div>
+    <div class="rmeta" id="rmeta">—</div>
+    <button class="dlbtn" id="btnDl">⬇️ Скачать видео</button>
+    <button class="dlbtn" id="btnPreview" style="background:#4b5563;margin-top:0">▶ Открыть в новой вкладке</button>
+    <button class="newbtn" id="btnNew">+ Обрезать другое видео</button>
+  </div>
+</div>
+
+<div class="errtoast" id="errToast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/umd/ffmpeg.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
+<script>
+const { FFmpeg } = FFmpegWASM;
+const { fetchFile, toBlobURL } = FFmpegUtil;
+
+// ── STATE ──
+let ffmpeg = null, ffReady = false;
+let videoFile = null, videoDur = 0;
+let startTime = 0, endTime = 0;
+let rotAngle = 0, rotation = 0, flipH = false, flipV = false;
+let speed = 1, format = 'mp4', quality = 'medium', invert = false;
+let outBlob = null, dragging = null;
+
+// ── DOM ──
+const G = id => document.getElementById(id);
+const su=G('stateUpload'), se=G('stateEditor');
+const sp=G('stateProgress'), sr=G('stateResult'), sf=G('stateFfmpeg');
+const fInp=G('fileInput'), videoEl=G('videoEl');
+const sbEl=G('sb'), sbFrames=G('sbFrames');
+const sbML=G('sbML'), sbMR=G('sbMR'), sbSel=G('sbSel');
+const sbHL=G('sbHL'), sbHR=G('sbHR'), sbPH=G('sbPH'), sbHint=G('sbHint');
+const m1=G('m1'),s1=G('s1'),f1=G('f1'), m2=G('m2'),s2=G('s2'),f2=G('f2');
+
+// ── UTILS ──
+const fmtT = s => `${Math.floor(Math.max(0,s)/60)}:${String(Math.floor(Math.max(0,s)%60)).padStart(2,'0')}`;
+const fmtFF = s => { const m=Math.floor(s/60),sec=(s%60).toFixed(2); return `${String(m).padStart(2,'0')}:${String(sec).padStart(5,'0')}`; };
+const fmtSz = b => b<1048576 ? (b/1024).toFixed(1)+' КБ' : (b/1048576).toFixed(1)+' МБ';
+const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+const showErr = msg => { const t=G('errToast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),4000); };
+
+// ── UPLOAD ──
+G('btnOpen').onclick = () => fInp.click();
+G('uploadArea').onclick = e => { if(e.target!==G('btnOpen')) fInp.click(); };
+fInp.onchange = () => { if(fInp.files[0]) loadFile(fInp.files[0]); };
+G('uploadArea').ondragover = e => { e.preventDefault(); G('uploadArea').classList.add('drag'); };
+G('uploadArea').ondragleave = () => G('uploadArea').classList.remove('drag');
+G('uploadArea').ondrop = e => { e.preventDefault(); G('uploadArea').classList.remove('drag'); if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); };
+
+function loadFile(f) {
+  if (!f.type.startsWith('video/') && !/\.(mp4|mov|avi|mkv|webm|3gp|flv|wmv|m4v)$/i.test(f.name))
+    return showErr('Выберите видео файл');
+  videoFile = f;
+  // Показываем превью сразу — БЕЗ загрузки на сервер
+  videoEl.src = URL.createObjectURL(f);
+  videoEl.onloadedmetadata = () => {
+    videoDur = videoEl.duration;
+    startTime = 0; endTime = videoDur;
+    G('infoName').textContent = f.name;
+    G('infoMeta').textContent = fmtSz(f.size) + ' · ' + fmtT(videoDur);
+    updateTI(); updateSB(); generateFrames();
+    su.style.display = 'none';
+    se.style.display = 'flex';
+    se.style.flexDirection = 'column';
+  };
+}
+
+// ── TOOL TABS ──
+const panels = { cut:'panelCut', rotate:'panelRotate', speed:'panelSpeed', format:'panelFormat' };
+document.querySelectorAll('.tool-tab').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tool-tab').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  Object.entries(panels).forEach(([k,v]) => G(v).style.display = k===b.dataset.tool?'':'none');
+});
+
+// ── PLAY ──
+const togglePlay = () => {
+  if (videoEl.paused) {
+    if (videoEl.currentTime<startTime||videoEl.currentTime>=endTime) videoEl.currentTime=startTime;
+    videoEl.play(); G('btnPlay').textContent='⏸'; G('btnPlayOv').textContent='⏸';
+  } else {
+    videoEl.pause(); G('btnPlay').textContent='▶'; G('btnPlayOv').textContent='▶';
+  }
+};
+G('btnPlay').onclick = G('btnPlayOv').onclick = togglePlay;
+videoEl.ontimeupdate = () => {
+  if (videoEl.currentTime>=endTime) { videoEl.pause(); videoEl.currentTime=endTime; G('btnPlay').textContent='▶'; G('btnPlayOv').textContent='▶'; }
+  updatePH();
+};
+
+// ── TRANSFORMS ──
+G('btnR90').onclick = () => { rotAngle=(rotAngle+90)%360; rotation=rotAngle; updTF(); updRotBtns(); };
+G('btnR180').onclick = () => { rotAngle=(rotAngle+180)%360; rotation=rotAngle; updTF(); updRotBtns(); };
+G('btnFlipH').onclick = () => { flipH=!flipH; G('btnFlipH').classList.toggle('on',flipH); updTF(); };
+G('btnFlipV').onclick = () => { flipV=!flipV; G('btnFlipV').classList.toggle('on',flipV); updTF(); };
+function updTF() { let t=`rotate(${rotAngle}deg)`; if(flipH)t+=' scaleX(-1)'; if(flipV)t+=' scaleY(-1)'; videoEl.style.transform=t; }
+function updRotBtns() { G('btnR90').classList.toggle('on',rotAngle!==0); G('btnR180').classList.toggle('on',rotAngle===180||rotAngle===270); }
+
+// ── SPEED ──
+document.querySelectorAll('.spbtn').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.spbtn').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); speed=parseFloat(b.dataset.sp); videoEl.playbackRate=speed;
+});
+
+// ── FORMAT / QUALITY ──
+document.querySelectorAll('.fmbtn').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.fmbtn').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); format=b.dataset.fmt;
+});
+document.querySelectorAll('.qlbtn').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.qlbtn').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); quality=b.dataset.q;
+});
+
+// ── INVERT / RESET ──
+G('btnInvert').onclick = () => { invert=!invert; G('btnInvert').classList.toggle('on',invert); };
+G('btnReset').onclick = resetAll;
+G('btnChange').onclick = () => {
+  se.style.display='none'; su.style.display='';
+  fInp.value=''; videoFile=null; videoEl.src=''; sbFrames.innerHTML='';
+};
+function resetAll() {
+  startTime=0; endTime=videoDur; rotAngle=0; rotation=0; flipH=false; flipV=false;
+  speed=1; format='mp4'; quality='medium'; invert=false;
+  document.querySelectorAll('.tfbtn').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.spbtn').forEach(b=>b.classList.toggle('on',b.dataset.sp==='1'));
+  document.querySelectorAll('.fmbtn').forEach(b=>b.classList.toggle('on',b.dataset.fmt==='mp4'));
+  document.querySelectorAll('.qlbtn').forEach(b=>b.classList.toggle('on',b.dataset.q==='medium'));
+  G('btnInvert').classList.remove('on');
+  videoEl.style.transform=''; videoEl.playbackRate=1;
+  updateTI(); updateSB();
+}
+
+// ── TIME INPUTS ──
+const readT = (m,s,f) => (parseInt(m.value)||0)*60+(parseInt(s.value)||0)+(parseInt(f.value)||0)*.1;
+function updateTI() {
+  m1.value=String(Math.floor(startTime/60)).padStart(2,'0');
+  s1.value=String(Math.floor(startTime%60)).padStart(2,'0');
+  f1.value=String(Math.floor((startTime%1)*10));
+  m2.value=String(Math.floor(endTime/60)).padStart(2,'0');
+  s2.value=String(Math.floor(endTime%60)).padStart(2,'0');
+  f2.value=String(Math.floor((endTime%1)*10));
+  G('durb').textContent=fmtT(Math.max(0,endTime-startTime));
+}
+[m1,s1,f1].forEach(i=>i.oninput=()=>{ startTime=clamp(readT(m1,s1,f1),0,endTime-.1); updateSB(); videoEl.currentTime=startTime; });
+[m2,s2,f2].forEach(i=>i.oninput=()=>{ endTime=clamp(readT(m2,s2,f2),startTime+.1,videoDur); updateSB(); videoEl.currentTime=endTime; updateTI(); });
+
+// ── STORYBOARD ──
+function updateSB() {
+  if(!videoDur) return;
+  const l=(startTime/videoDur)*100, r=(endTime/videoDur)*100;
+  sbML.style.width=l+'%';
+  sbMR.style.width=(100-r)+'%';
+  sbSel.style.left=l+'%'; sbSel.style.right=(100-r)+'%';
+  updateTI();
+}
+function updatePH() { if(!videoDur) return; sbPH.style.left=(videoEl.currentTime/videoDur)*100+'%'; }
+
+async function generateFrames() {
+  const W=sbEl.offsetWidth||400, n=Math.max(4,Math.floor(W/28));
+  sbFrames.innerHTML='';
+  const fw=Math.floor(W/n), divs=[];
+  for(let i=0;i<n;i++) { const d=document.createElement('div'); d.className='sbframe ld'; d.style.width=fw+'px'; sbFrames.appendChild(d); divs.push(d); }
+  const cv=document.createElement('canvas'); cv.width=56; cv.height=50;
+  const ctx=cv.getContext('2d');
+  for(let i=0;i<n;i++) {
+    const t=(i/Math.max(1,n-1))*videoDur;
+    try {
+      await new Promise(res=>{ videoEl.currentTime=t; const h=()=>{ videoEl.removeEventListener('seeked',h); res(); }; videoEl.addEventListener('seeked',h); });
+      ctx.drawImage(videoEl,0,0,56,50);
+      const img=document.createElement('img'); img.src=cv.toDataURL('image/jpeg',.6);
+      divs[i].innerHTML=''; divs[i].appendChild(img); divs[i].classList.remove('ld');
+    } catch(e) {}
+  }
+  videoEl.currentTime=0;
+}
+
+// SB drag
+sbEl.onmousedown = sbEl.ontouchstart = e => {
+  const touch=e.touches?.[0];
+  const tgt=touch?document.elementFromPoint(touch.clientX,touch.clientY):e.target;
+  const rect=sbEl.getBoundingClientRect();
+  const x=(touch?touch.clientX:e.clientX)-rect.left;
+  if(sbHL.contains(tgt)||tgt===sbHL) dragging='s';
+  else if(sbHR.contains(tgt)||tgt===sbHR) dragging='e';
+  else { videoEl.currentTime=clamp((x/rect.width)*videoDur,0,videoDur); updatePH(); return; }
+  e.preventDefault();
+};
+const onMv=e=>{ if(!dragging) return; const touch=e.touches?.[0]; const rect=sbEl.getBoundingClientRect(); const x=(touch?touch.clientX:e.clientX)-rect.left; const p=clamp(x/rect.width,0,1); const t=p*videoDur;
+  if(dragging==='s'){startTime=clamp(t,0,endTime-.1);videoEl.currentTime=startTime;}
+  else{endTime=clamp(t,startTime+.1,videoDur);videoEl.currentTime=endTime;}
+  updateSB(); sbHint.style.left=(p*100)+'%'; sbHint.textContent=fmtT(t); sbHint.style.display='block';
+};
+const onUp=()=>{ dragging=null; sbHint.style.display='none'; };
+document.addEventListener('mousemove',onMv); document.addEventListener('touchmove',onMv,{passive:false});
+document.addEventListener('mouseup',onUp); document.addEventListener('touchend',onUp);
+
+// ── FFMPEG INIT ──
+async function initFF() {
+  if(ffReady) return true;
+  sf.style.display='flex';
+  try {
+    ffmpeg=new FFmpeg();
+    ffmpeg.on('log',({message})=>{
+      const m=message.match(/time=(\d+):(\d+):(\d+\.\d+)/);
+      if(m){ const cur=+m[1]*3600+ +m[2]*60+parseFloat(m[3]); const dur=endTime-startTime; const p=Math.min(99,cur/Math.max(.1,dur)*100); G('pfill').style.width=p+'%'; G('ppct').textContent=Math.round(p)+'%'; }
+    });
+
+    // Пробуем многопоточную версию (требует COOP/COEP), если не работает — однопоточную
+    const BASE_MT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/esm';
+    const BASE_ST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
+    const FF_CDN  = 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/esm';
+
+    const canUseMT = typeof SharedArrayBuffer !== 'undefined';
+
+    if (canUseMT) {
+      try {
+        await ffmpeg.load({
+          coreURL:   await toBlobURL(`${BASE_MT}/ffmpeg-core.js`,        'text/javascript'),
+          wasmURL:   await toBlobURL(`${BASE_MT}/ffmpeg-core.wasm`,      'application/wasm'),
+          workerURL: await toBlobURL(`${BASE_MT}/ffmpeg-core.worker.js`, 'text/javascript'),
+        });
+        ffReady=true; sf.style.display='none'; return true;
+      } catch(e) { /* падаем на ST */ }
+    }
+
+    // Однопоточная — работает везде без COOP/COEP
+    await ffmpeg.load({
+      coreURL: await toBlobURL(`${BASE_ST}/ffmpeg-core.js`,   'text/javascript'),
+      wasmURL: await toBlobURL(`${BASE_ST}/ffmpeg-core.wasm`, 'application/wasm'),
+    });
+    ffReady=true; sf.style.display='none'; return true;
+  } catch(e) { sf.style.display='none'; showErr('Не удалось загрузить FFmpeg: '+e.message); return false; }
+}
+
+// ── SAVE ──
+G('btnSave').onclick = async () => {
+  if(!videoFile) return;
+  const ok=await initFF();
+  if(!ok) return;
+
+  se.style.display='none'; sp.style.display='flex';
+  G('pfill').style.width='0%'; G('ppct').textContent='0%';
+  G('ptitle').textContent='Обрабатываем видео...';
+  G('psub').textContent='FFmpeg WebAssembly работает в браузере';
+
+  try {
+    const ext=videoFile.name.split('.').pop().toLowerCase()||'mp4';
+    const inN=`in.${ext}`, outN=`out.${format}`;
+    await ffmpeg.writeFile(inN, await fetchFile(videoFile));
+
+    let vf=[];
+    if(rotation===90) vf.push('transpose=1');
+    else if(rotation===180) vf.push('transpose=2,transpose=2');
+    else if(rotation===270) vf.push('transpose=2');
+    if(flipH) vf.push('hflip');
+    if(flipV) vf.push('vflip');
+    if(speed!==1) vf.push(`setpts=${(1/speed).toFixed(3)}*PTS`);
+    let af='';
+    if(speed===2)af='atempo=2.0'; else if(speed===1.5)af='atempo=1.5'; else if(speed===.75)af='atempo=0.75'; else if(speed===.5)af='atempo=0.5';
+
+    const crf={low:'35',medium:'23',high:'18'}[quality]||'23';
+    let args=[];
+
+    if(!invert) {
+      args=['-ss',fmtFF(startTime),'-to',fmtFF(endTime),'-i',inN];
+    } else {
+      // invert mode: вырезаем фрагмент, оставляем всё вокруг
+      args=['-i',inN];
+      if(startTime>0 && endTime<videoDur) {
+        const vfS=vf.length>0?`,${vf.join(',')}`:'';
+        const afS=af?`,${af}`:'';
+        args=['-i',inN,'-filter_complex',
+          `[0:v]trim=0:${startTime.toFixed(3)},setpts=PTS-STARTPTS${vfS}[v1];`+
+          `[0:v]trim=${endTime.toFixed(3)}:${videoDur.toFixed(3)},setpts=PTS-STARTPTS${vfS}[v2];`+
+          `[0:a]atrim=0:${startTime.toFixed(3)},asetpts=PTS-STARTPTS${afS}[a1];`+
+          `[0:a]atrim=${endTime.toFixed(3)}:${videoDur.toFixed(3)},asetpts=PTS-STARTPTS${afS}[a2];`+
+          `[v1][a1][v2][a2]concat=n=2:v=1:a=1[v][a]`,
+          '-map','[v]','-map','[a]'];
+        vf=[]; af='';
+      }
+    }
+
+    if(vf.length) args.push('-vf',vf.join(','));
+    if(af) args.push('-af',af);
+
+    if(format==='gif') { args.push('-r','10','-vf',(vf.length?vf.join(',')+',' : '')+'scale=480:-1:flags=lanczos','-an'); }
+    else { args.push('-c:v','libx264','-crf',crf,'-preset','fast','-c:a','aac','-b:a','128k','-movflags','+faststart'); }
+    args.push(outN);
+
+    await ffmpeg.exec(args);
+    const data=await ffmpeg.readFile(outN);
+    outBlob=new Blob([data.buffer],{type:format==='gif'?'image/gif':'video/'+format});
+    await ffmpeg.deleteFile(inN).catch(()=>{}); await ffmpeg.deleteFile(outN).catch(()=>{});
+
+    G('pfill').style.width='100%'; G('ppct').textContent='100%';
+    setTimeout(()=>{
+      sp.style.display='none'; sr.style.display='flex';
+      const dur=invert?videoDur-(endTime-startTime):(endTime-startTime);
+      G('rmeta').textContent=`${fmtSz(outBlob.size)} · ${fmtT(dur/speed)} · ${format.toUpperCase()}`;
+    },300);
+  } catch(e) {
+    sp.style.display='none'; se.style.display='flex'; se.style.flexDirection='column';
+    showErr('Ошибка: '+e.message);
+  }
+};
+
+// ── DOWNLOAD ──
+G('btnDl').onclick = () => {
+  if(!outBlob) { showErr('Файл не найден, обработайте видео заново'); return; }
+  try {
+    const url = URL.createObjectURL(outBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (videoFile?.name?.replace(/\.[^.]+$/, '') || 'video') + '_cut.' + format;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    // Освобождаем память через секунду
+    setTimeout(() => { URL.revokeObjectURL(url); document.body.removeChild(a); }, 1000);
+  } catch(e) {
+    showErr('Ошибка скачивания: ' + e.message);
+  }
+};
+
+// ── PREVIEW (fallback for Telegram WebView) ──
+G('btnPreview').onclick = () => {
+  if(!outBlob) { showErr('Файл не найден, обработайте видео заново'); return; }
+  const url = URL.createObjectURL(outBlob);
+  window.open(url, '_blank');
+};
+
+G('btnNew').onclick = () => {
+  sr.style.display='none'; se.style.display='none'; su.style.display='';
+  fInp.value=''; videoFile=null; outBlob=null; videoEl.src=''; sbFrames.innerHTML='';
+  resetAll();
+};
+
+// Telegram
+if(window.Telegram?.WebApp){ window.Telegram.WebApp.ready(); window.Telegram.WebApp.expand(); }
+window.addEventListener('resize',()=>{ if(videoDur) updateSB(); });
+</script>
+
+</body>
+</html>
