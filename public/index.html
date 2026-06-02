@@ -526,10 +526,10 @@ async function initFF() {
       if(m){ const cur=+m[1]*3600+ +m[2]*60+parseFloat(m[3]); const dur=endTime-startTime; const p=Math.min(99,cur/Math.max(.1,dur)*100); G('pfill').style.width=p+'%'; G('ppct').textContent=Math.round(p)+'%'; }
     });
 
-    // Пробуем многопоточную версию (требует COOP/COEP), если не работает — однопоточную
-    const BASE_MT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/esm';
-    const BASE_ST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
-    const FF_CDN  = 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/esm';
+    const BASE_MT   = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/esm';
+    const BASE_ST   = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
+    // worker самого ffmpeg-пакета — именно он вызывал ошибку CORS
+    const FF_WORKER = 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/esm/worker.js';
 
     const canUseMT = typeof SharedArrayBuffer !== 'undefined';
 
@@ -544,10 +544,11 @@ async function initFF() {
       } catch(e) { /* падаем на ST */ }
     }
 
-    // Однопоточная — работает везде без COOP/COEP
+    // Однопоточная — worker.js ffmpeg-пакета тоже через toBlobURL
     await ffmpeg.load({
-      coreURL: await toBlobURL(`${BASE_ST}/ffmpeg-core.js`,   'text/javascript'),
-      wasmURL: await toBlobURL(`${BASE_ST}/ffmpeg-core.wasm`, 'application/wasm'),
+      coreURL:   await toBlobURL(`${BASE_ST}/ffmpeg-core.js`,   'text/javascript'),
+      wasmURL:   await toBlobURL(`${BASE_ST}/ffmpeg-core.wasm`, 'application/wasm'),
+      workerURL: await toBlobURL(FF_WORKER,                      'text/javascript'),
     });
     ffReady=true; sf.style.display='none'; return true;
   } catch(e) { sf.style.display='none'; showErr('Не удалось загрузить FFmpeg: '+e.message); return false; }
