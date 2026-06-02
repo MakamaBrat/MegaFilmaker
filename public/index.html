@@ -328,9 +328,11 @@ body { font-family: 'Rubik','Segoe UI',sans-serif; background:#fff; color:var(--
 
 <div class="errtoast" id="errToast"></div>
 
-<script type="module">
-import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/esm/index.js';
-import { fetchFile, toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/umd/ffmpeg.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
+<script>
+const { FFmpeg } = FFmpegWASM;
+const { fetchFile, toBlobURL } = FFmpegUtil;
 
 // ── STATE ──
 let ffmpeg = null, ffReady = false;
@@ -527,14 +529,15 @@ async function initFF() {
     // Пробуем многопоточную версию (требует COOP/COEP), если не работает — однопоточную
     const BASE_MT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/esm';
     const BASE_ST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
+    const FF_CDN  = 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/esm';
 
     const canUseMT = typeof SharedArrayBuffer !== 'undefined';
 
     if (canUseMT) {
       try {
         await ffmpeg.load({
-          coreURL:   await toBlobURL(`${BASE_MT}/ffmpeg-core.js`,   'text/javascript'),
-          wasmURL:   await toBlobURL(`${BASE_MT}/ffmpeg-core.wasm`, 'application/wasm'),
+          coreURL:   await toBlobURL(`${BASE_MT}/ffmpeg-core.js`,        'text/javascript'),
+          wasmURL:   await toBlobURL(`${BASE_MT}/ffmpeg-core.wasm`,      'application/wasm'),
           workerURL: await toBlobURL(`${BASE_MT}/ffmpeg-core.worker.js`, 'text/javascript'),
         });
         ffReady=true; sf.style.display='none'; return true;
@@ -657,5 +660,6 @@ G('btnNew').onclick = () => {
 if(window.Telegram?.WebApp){ window.Telegram.WebApp.ready(); window.Telegram.WebApp.expand(); }
 window.addEventListener('resize',()=>{ if(videoDur) updateSB(); });
 </script>
+
 </body>
 </html>
