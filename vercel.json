@@ -1,23 +1,7 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/*.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "public/**",
-      "use": "@vercel/static"
-    }
-  ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1" },
     { "src": "/(.*)", "dest": "/public/$1" }
-  ],
-  "functions": {
-    "api/upload.js": { "maxDuration": 60, "memory": 1024 },
-    "api/process.js": { "maxDuration": 300, "memory": 3008 },
-    "api/status.js": { "maxDuration": 10 },
-    "api/download.js": { "maxDuration": 30 }
-  }
+  ]
 }
