@@ -565,13 +565,14 @@ G('btnSave').onclick = async () => {
     src.playbackRate = speed;
     await new Promise(r => { src.onloadedmetadata = r; });
 
-    // AudioContext для захвата звука
+    // AudioContext для захвата звука (БЕЗ вывода в колонки)
     let audioStream = null;
     try {
       const actx = new AudioContext();
       const srcNode = actx.createMediaElementSource(src);
       const dest = actx.createMediaStreamDestination();
-      srcNode.connect(dest); srcNode.connect(actx.destination);
+      srcNode.connect(dest);
+      // НЕ подключаем к actx.destination — иначе звук идёт в колонки во время обработки
       audioStream = dest.stream;
     } catch(e) { /* audio может быть недоступен */ }
 

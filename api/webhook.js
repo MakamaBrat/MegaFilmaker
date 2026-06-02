@@ -95,19 +95,17 @@ function sendVideoToUser(chatId, fileId, fmt, name) {
 }
 
 export default async function handler(req, res) {
-  // Vercel проверяет живость — отвечаем ОК
   if (req.method !== 'POST') return res.status(200).json({ ok: true });
 
   const update = req.body;
-  res.status(200).json({ ok: true }); // отвечаем Telegram сразу, не ждём обработки
 
   try {
     const msg = update?.message;
-    if (!msg) return;
+    if (!msg) return res.status(200).json({ ok: true });
 
     const chatId = msg.chat.id;
 
-    // ── /start — показываем кнопку открытия Mini App ──
+    // ── /start ──
     if (msg.text === '/start') {
       const host = process.env.APP_URL || process.env.VERCEL_URL;
       await tgCall('sendMessage', {
@@ -120,29 +118,30 @@ export default async function handler(req, res) {
           }]],
         },
       });
-      return;
+      return res.status(200).json({ ok: true });
     }
 
-    // ── web_app_data — пользователь нажал "Отправить в Telegram" ──
+    // ── web_app_data ──
     if (msg.web_app_data?.data) {
       let data;
       try { data = JSON.parse(msg.web_app_data.data); }
-      catch { return; }
+      catch { return res.status(200).json({ ok: true }); }
 
-      if (data.action !== 'send_video') return;
+      if (data.action !== 'send_video') return res.status(200).json({ ok: true });
 
-      // Сразу сообщаем пользователю
+      // Сообщаем пользователю что получили
       await tgCall('sendMessage', {
         chat_id: chatId,
         text: '⏳ Видео получено, отправляю...',
       });
 
+      // Скачиваем и отправляем — ПЕРЕД тем как ответить Telegram
       try {
         const result = await sendVideoToUser(chatId, data.fileId, data.format || 'mp4', data.name || 'video.mp4');
         if (!result.ok) {
           await tgCall('sendMessage', {
             chat_id: chatId,
-            text: `❌ Не удалось отправить видео: ${result.description || 'неизвестная ошибка'}\n\nВозможно файл слишком большой (лимит Telegram — 50 МБ).`,
+            text: `❌ Не удалось отправить: ${result.description || 'неизвестная ошибка'}\n\nВозможно файл слишком большой (лимит Telegram — 50 МБ).`,
           });
         }
       } catch (e) {
@@ -151,9 +150,13 @@ export default async function handler(req, res) {
           text: `❌ Ошибка: ${e.message}`,
         });
       }
+
+      return res.status(200).json({ ok: true });
     }
 
   } catch (e) {
     console.error('Webhook error:', e.message);
   }
+
+  return res.status(200).json({ ok: true });
 }
