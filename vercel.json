@@ -13,10 +13,5 @@
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/:path*" },
     { "source": "/:path*",    "destination": "/public/:path*" }
-  ],
-  "functions": {
-    "api/webhook.js": { "maxDuration": 60 },
-    "api/process.js": { "maxDuration": 60, "memory": 3008 },
-    "api/upload.js":  { "maxDuration": 30, "memory": 1024 }
-  }
+  ]
 }
