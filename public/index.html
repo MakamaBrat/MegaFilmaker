@@ -142,11 +142,6 @@ body { font-family: 'Rubik','Segoe UI',sans-serif; background:#fff; color:var(--
 .newbtn { width:100%; background:transparent; border:1px solid var(--border); border-radius:6px; padding:9px; color:var(--muted); font-size:13px; font-family:inherit; cursor:pointer; }
 .newbtn:hover { border-color:#999; color:var(--text); }
 
-/* FFMPEG LOADING */
-#stateFfmpeg { display:none; position:fixed; inset:0; background:rgba(0,0,0,.9); z-index:1000; flex-direction:column; align-items:center; justify-content:center; gap:14px; color:#fff; }
-#stateFfmpeg .ptitle { color:#fff; }
-#stateFfmpeg .psub { color:#9ca3af; }
-
 /* ERROR */
 .errtoast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#fef2f2; border:1px solid #fca5a5; color:var(--danger); border-radius:8px; padding:10px 16px; font-size:13px; z-index:2000; display:none; max-width:90vw; text-align:center; box-shadow:0 4px 12px rgba(0,0,0,.1); }
 .errtoast.show { display:block; }
@@ -296,19 +291,14 @@ body { font-family: 'Rubik','Segoe UI',sans-serif; background:#fff; color:var(--
   </div>
 </div>
 
-<!-- FFMPEG LOADING -->
-<div id="stateFfmpeg">
-  <div class="spinner"></div>
-  <div class="ptitle">Загружаем FFmpeg...</div>
-  <div class="psub">~25 МБ, только один раз</div>
-</div>
+
 
 <!-- PROGRESS -->
 <div id="stateProgress">
   <div class="pbox">
     <div class="spinner"></div>
     <div class="ptitle" id="ptitle">Обрабатываем...</div>
-    <div class="psub" id="psub">FFmpeg работает в браузере</div>
+    <div class="psub" id="psub">Запись через MediaRecorder</div>
     <div class="pbar"><div class="pfill" id="pfill"></div></div>
     <div class="ppct" id="ppct">0%</div>
   </div>
@@ -328,14 +318,10 @@ body { font-family: 'Rubik','Segoe UI',sans-serif; background:#fff; color:var(--
 
 <div class="errtoast" id="errToast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/umd/ffmpeg.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
 <script>
-const { FFmpeg } = FFmpegWASM;
-const { fetchFile, toBlobURL } = FFmpegUtil;
+// Без FFmpeg — используем MediaRecorder + Canvas API
 
 // ── STATE ──
-let ffmpeg = null, ffReady = false;
 let videoFile = null, videoDur = 0;
 let startTime = 0, endTime = 0;
 let rotAngle = 0, rotation = 0, flipH = false, flipV = false;
@@ -345,7 +331,7 @@ let outBlob = null, dragging = null;
 // ── DOM ──
 const G = id => document.getElementById(id);
 const su=G('stateUpload'), se=G('stateEditor');
-const sp=G('stateProgress'), sr=G('stateResult'), sf=G('stateFfmpeg');
+const sp=G('stateProgress'), sr=G('stateResult');
 const fInp=G('fileInput'), videoEl=G('videoEl');
 const sbEl=G('sb'), sbFrames=G('sbFrames');
 const sbML=G('sbML'), sbMR=G('sbMR'), sbSel=G('sbSel');
@@ -515,116 +501,154 @@ const onUp=()=>{ dragging=null; sbHint.style.display='none'; };
 document.addEventListener('mousemove',onMv); document.addEventListener('touchmove',onMv,{passive:false});
 document.addEventListener('mouseup',onUp); document.addEventListener('touchend',onUp);
 
-// ── FFMPEG INIT ──
-async function initFF() {
-  if(ffReady) return true;
-  sf.style.display='flex';
-  try {
-    ffmpeg=new FFmpeg();
-    ffmpeg.on('log',({message})=>{
-      const m=message.match(/time=(\d+):(\d+):(\d+\.\d+)/);
-      if(m){ const cur=+m[1]*3600+ +m[2]*60+parseFloat(m[3]); const dur=endTime-startTime; const p=Math.min(99,cur/Math.max(.1,dur)*100); G('pfill').style.width=p+'%'; G('ppct').textContent=Math.round(p)+'%'; }
-    });
-
-    const BASE_MT   = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/esm';
-    const BASE_ST   = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
-    // worker самого ffmpeg-пакета — именно он вызывал ошибку CORS
-    const FF_WORKER = 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/esm/worker.js';
-
-    const canUseMT = typeof SharedArrayBuffer !== 'undefined';
-
-    if (canUseMT) {
-      try {
-        await ffmpeg.load({
-          coreURL:   await toBlobURL(`${BASE_MT}/ffmpeg-core.js`,        'text/javascript'),
-          wasmURL:   await toBlobURL(`${BASE_MT}/ffmpeg-core.wasm`,      'application/wasm'),
-          workerURL: await toBlobURL(`${BASE_MT}/ffmpeg-core.worker.js`, 'text/javascript'),
-        });
-        ffReady=true; sf.style.display='none'; return true;
-      } catch(e) { /* падаем на ST */ }
-    }
-
-    // Однопоточная — worker.js ffmpeg-пакета тоже через toBlobURL
-    await ffmpeg.load({
-      coreURL:   await toBlobURL(`${BASE_ST}/ffmpeg-core.js`,   'text/javascript'),
-      wasmURL:   await toBlobURL(`${BASE_ST}/ffmpeg-core.wasm`, 'application/wasm'),
-      workerURL: await toBlobURL(FF_WORKER,                      'text/javascript'),
-    });
-    ffReady=true; sf.style.display='none'; return true;
-  } catch(e) { sf.style.display='none'; showErr('Не удалось загрузить FFmpeg: '+e.message); return false; }
-}
-
-// ── SAVE ──
+// ── SAVE via MediaRecorder ──
 G('btnSave').onclick = async () => {
-  if(!videoFile) return;
-  const ok=await initFF();
-  if(!ok) return;
+  if (!videoFile) return;
 
-  se.style.display='none'; sp.style.display='flex';
-  G('pfill').style.width='0%'; G('ppct').textContent='0%';
-  G('ptitle').textContent='Обрабатываем видео...';
-  G('psub').textContent='FFmpeg WebAssembly работает в браузере';
+  // MediaRecorder не поддерживает invert-режим, поворот и скорость через seek
+  // Используем Canvas + captureStream для применения трансформаций
+
+  se.style.display = 'none'; sp.style.display = 'flex';
+  G('pfill').style.width = '0%'; G('ppct').textContent = '0%';
+  G('ptitle').textContent = 'Обрабатываем видео...';
+  G('psub').textContent = 'Запись фрагмента в браузере';
 
   try {
-    const ext=videoFile.name.split('.').pop().toLowerCase()||'mp4';
-    const inN=`in.${ext}`, outN=`out.${format}`;
-    await ffmpeg.writeFile(inN, await fetchFile(videoFile));
+    const mimeType = getBestMime(format);
+    if (!mimeType) { throw new Error('Ваш браузер не поддерживает запись в этот формат. Выберите WEBM или MP4.'); }
 
-    let vf=[];
-    if(rotation===90) vf.push('transpose=1');
-    else if(rotation===180) vf.push('transpose=2,transpose=2');
-    else if(rotation===270) vf.push('transpose=2');
-    if(flipH) vf.push('hflip');
-    if(flipV) vf.push('vflip');
-    if(speed!==1) vf.push(`setpts=${(1/speed).toFixed(3)}*PTS`);
-    let af='';
-    if(speed===2)af='atempo=2.0'; else if(speed===1.5)af='atempo=1.5'; else if(speed===.75)af='atempo=0.75'; else if(speed===.5)af='atempo=0.5';
+    // Canvas для рендеринга с трансформациями
+    const cv = document.createElement('canvas');
+    const ctx = cv.getContext('2d');
 
-    const crf={low:'35',medium:'23',high:'18'}[quality]||'23';
-    let args=[];
+    // Определяем размеры с учётом поворота
+    const origW = videoEl.videoWidth  || 640;
+    const origH = videoEl.videoHeight || 360;
+    const rotated = (rotation === 90 || rotation === 270);
+    cv.width  = rotated ? origH : origW;
+    cv.height = rotated ? origW : origH;
 
-    if(!invert) {
-      args=['-ss',fmtFF(startTime),'-to',fmtFF(endTime),'-i',inN];
-    } else {
-      // invert mode: вырезаем фрагмент, оставляем всё вокруг
-      args=['-i',inN];
-      if(startTime>0 && endTime<videoDur) {
-        const vfS=vf.length>0?`,${vf.join(',')}`:'';
-        const afS=af?`,${af}`:'';
-        args=['-i',inN,'-filter_complex',
-          `[0:v]trim=0:${startTime.toFixed(3)},setpts=PTS-STARTPTS${vfS}[v1];`+
-          `[0:v]trim=${endTime.toFixed(3)}:${videoDur.toFixed(3)},setpts=PTS-STARTPTS${vfS}[v2];`+
-          `[0:a]atrim=0:${startTime.toFixed(3)},asetpts=PTS-STARTPTS${afS}[a1];`+
-          `[0:a]atrim=${endTime.toFixed(3)}:${videoDur.toFixed(3)},asetpts=PTS-STARTPTS${afS}[a2];`+
-          `[v1][a1][v2][a2]concat=n=2:v=1:a=1[v][a]`,
-          '-map','[v]','-map','[a]'];
-        vf=[]; af='';
-      }
+    // Создаём скрытый video-элемент для воспроизведения источника
+    const src = document.createElement('video');
+    src.src = URL.createObjectURL(videoFile);
+    src.muted = true; // звук отдельно через AudioContext
+    src.playbackRate = speed;
+    await new Promise(r => { src.onloadedmetadata = r; });
+
+    // AudioContext для захвата звука
+    let audioStream = null;
+    try {
+      const actx = new AudioContext();
+      const srcNode = actx.createMediaElementSource(src);
+      const dest = actx.createMediaStreamDestination();
+      srcNode.connect(dest); srcNode.connect(actx.destination);
+      audioStream = dest.stream;
+    } catch(e) { /* audio может быть недоступен */ }
+
+    // Stream с canvas + audio
+    const canvasStream = cv.captureStream(30);
+    const tracks = [...canvasStream.getTracks(), ...(audioStream ? audioStream.getTracks() : [])];
+    const combinedStream = new MediaStream(tracks);
+
+    const chunks = [];
+    const rec = new MediaRecorder(combinedStream, { mimeType, videoBitsPerSecond: qualityBitrate() });
+    rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+
+    // Перемотка к startTime
+    src.currentTime = startTime;
+    await new Promise(r => { src.onseeked = r; });
+
+    // Рисуем кадры на canvas
+    let rafId;
+    const segEnd   = invert ? startTime : endTime; // для простого режима
+    const totalDur = invert ? videoDur - (endTime - startTime) : (endTime - startTime);
+
+    function drawFrame() {
+      if (src.paused || src.ended) return;
+      ctx.save();
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      ctx.translate(cv.width / 2, cv.height / 2);
+      ctx.rotate(rotation * Math.PI / 180);
+      if (flipH) ctx.scale(-1, 1);
+      if (flipV) ctx.scale(1, -1);
+      ctx.drawImage(src, -origW / 2, -origH / 2, origW, origH);
+      ctx.restore();
+      rafId = requestAnimationFrame(drawFrame);
     }
 
-    if(vf.length) args.push('-vf',vf.join(','));
-    if(af) args.push('-af',af);
+    rec.start(100);
+    src.play();
+    drawFrame();
 
-    if(format==='gif') { args.push('-r','10','-vf',(vf.length?vf.join(',')+',' : '')+'scale=480:-1:flags=lanczos','-an'); }
-    else { args.push('-c:v','libx264','-crf',crf,'-preset','fast','-c:a','aac','-b:a','128k','-movflags','+faststart'); }
-    args.push(outN);
+    // Для инверт-режима: пишем два сегмента
+    if (invert && startTime > 0 && endTime < videoDur) {
+      // Сегмент 1: 0 → startTime
+      src.currentTime = 0;
+      await new Promise(r => { src.onseeked = r; });
+      src.play(); drawFrame();
+      await waitUntil(src, startTime, totalDur, 0, 50);
+      src.pause();
 
-    await ffmpeg.exec(args);
-    const data=await ffmpeg.readFile(outN);
-    outBlob=new Blob([data.buffer],{type:format==='gif'?'image/gif':'video/'+format});
-    await ffmpeg.deleteFile(inN).catch(()=>{}); await ffmpeg.deleteFile(outN).catch(()=>{});
+      // Сегмент 2: endTime → videoDur
+      src.currentTime = endTime;
+      await new Promise(r => { src.onseeked = r; });
+      src.play(); drawFrame();
+      await waitUntil(src, videoDur, totalDur, 50, 100);
+      src.pause();
+    } else {
+      // Обычная обрезка: startTime → endTime
+      await waitUntil(src, invert ? videoDur : endTime, totalDur, 0, 100);
+      src.pause();
+    }
 
-    G('pfill').style.width='100%'; G('ppct').textContent='100%';
-    setTimeout(()=>{
-      sp.style.display='none'; sr.style.display='flex';
-      const dur=invert?videoDur-(endTime-startTime):(endTime-startTime);
-      G('rmeta').textContent=`${fmtSz(outBlob.size)} · ${fmtT(dur/speed)} · ${format.toUpperCase()}`;
-    },300);
+    cancelAnimationFrame(rafId);
+    rec.stop();
+
+    await new Promise(r => { rec.onstop = r; });
+    combinedStream.getTracks().forEach(t => t.stop());
+    URL.revokeObjectURL(src.src);
+
+    const ext = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('webm') ? 'webm' : 'webm';
+    outBlob = new Blob(chunks, { type: mimeType });
+
+    G('pfill').style.width = '100%'; G('ppct').textContent = '100%';
+    setTimeout(() => {
+      sp.style.display = 'none'; sr.style.display = 'flex';
+      G('rmeta').textContent = `${fmtSz(outBlob.size)} · ${fmtT(totalDur / speed)} · ${ext.toUpperCase()}`;
+    }, 300);
+
   } catch(e) {
-    sp.style.display='none'; se.style.display='flex'; se.style.flexDirection='column';
-    showErr('Ошибка: '+e.message);
+    sp.style.display = 'none'; se.style.display = 'flex'; se.style.flexDirection = 'column';
+    showErr('Ошибка: ' + e.message);
   }
 };
+
+function getBestMime(fmt) {
+  const candidates = fmt === 'mp4'
+    ? ['video/mp4;codecs=avc1,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm']
+    : ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+  return candidates.find(m => MediaRecorder.isTypeSupported(m)) || null;
+}
+
+function qualityBitrate() {
+  return { low: 1_000_000, medium: 4_000_000, high: 8_000_000 }[quality] || 4_000_000;
+}
+
+// Ждём пока видео дойдёт до targetTime, обновляя прогресс
+function waitUntil(video, targetTime, totalDur, pctFrom, pctTo) {
+  return new Promise(resolve => {
+    function check() {
+      const elapsed = Math.max(0, video.currentTime - (pctFrom === 0 ? video.currentTime : 0));
+      const ratio = Math.min(1, (video.currentTime - (targetTime - totalDur)) / Math.max(0.01, totalDur));
+      const pct = pctFrom + ratio * (pctTo - pctFrom);
+      G('pfill').style.width = Math.min(pct, pctTo) + '%';
+      G('ppct').textContent = Math.round(Math.min(pct, pctTo)) + '%';
+      if (video.currentTime >= targetTime - 0.15 || video.ended) { resolve(); }
+      else { setTimeout(check, 150); }
+    }
+    check();
+  });
+}
 
 // ── DOWNLOAD ──
 G('btnDl').onclick = () => {
