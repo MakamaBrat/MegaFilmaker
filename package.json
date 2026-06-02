@@ -1,0 +1,14 @@
+{
+  "name": "videocutter-telegram",
+  "version": "1.0.0",
+  "description": "Video cutter Telegram Mini App",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'No build needed'"
+  },
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "busboy": "^1.6.0",
+    "fluent-ffmpeg": "^2.1.3"
+  }
+}

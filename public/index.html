@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Обрезать видео онлайн</title>
+<style>
+/* ─── RESET & BASE ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --header-bg: #101114;
+  --body-bg: #fff;
+  --accent: #2962ff;
+  --accent-hover: #1a4fd8;
+  --text: #1a1a1a;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --toolbar-bg: #f8f8f8;
+  --toolbar-border: #e0e0e0;
+  --tool-active-bg: rgba(41,98,255,0.1);
+  --tool-active-color: #2962ff;
+  --video-bg: #1a1a1a;
+  --timeline-bg: #2a2a2a;
+  --timeline-mask: rgba(0,0,0,0.55);
+  --handle-color: #2962ff;
+  --success: #22c55e;
+  --danger: #ef4444;
+}
+body {
+  font-family: 'Rubik', 'Segoe UI', sans-serif;
+  background: var(--body-bg);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 300;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── HEADER ─── */
+.header {
+  background: var(--header-bg);
+  height: 52px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  flex-shrink: 0;
+  z-index: 100;
+}
+.logo { display: flex; align-items: center; gap: 8px; text-decoration: none; }
+.logo-icon { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.logo-text { color: #fff; font-size: 15px; font-weight: 500; white-space: nowrap; }
+.tg-badge { margin-left: auto; background: rgba(41,98,255,0.25); color: #7baeff; border: 1px solid rgba(41,98,255,0.4); border-radius: 20px; padding: 3px 10px; font-size: 11px; font-weight: 500; }
+
+/* ─── MAIN APP TITLE ─── */
+.app-title { text-align: center; padding: 28px 16px 20px; }
+.app-title h1 { font-size: 28px; font-weight: 700; margin-bottom: 6px; }
+.app-title h2 { font-size: 15px; font-weight: 300; color: var(--muted); }
+
+/* ─── UPLOAD STATE ─── */
+#stateUpload { max-width: 540px; margin: 0 auto; padding: 0 16px 40px; width: 100%; }
+.upload-area {
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  background: #fafafa;
+  text-align: center;
+  padding: 48px 24px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+.upload-area:hover, .upload-area.drag-over {
+  border-color: var(--accent);
+  background: rgba(41,98,255,0.03);
+}
+.upload-btn-big {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 6px;
+  padding: 13px 32px; font-size: 17px; font-weight: 500;
+  cursor: pointer; font-family: inherit;
+  margin-top: 20px;
+  transition: background 0.2s;
+}
+.upload-btn-big:hover { background: var(--accent-hover); }
+.drop-hint { margin-top: 14px; color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 6px; justify-content: center; }
+.drop-hint::before { content: ''; display: inline-block; width: 16px; height: 14px; background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 89 80' fill='%23999'><path d='M86.5 53A2.5 2.5 0 0084 55.5v7.6C84 69.4 78.3 75 72 75H15.8C9.4 75 5 69.3 5 63v-7.5a2.5 2.5 0 10-5 0v7.8C0 72.5 7.6 80 16.8 80H73c9.2 0 16-7.6 16-16.7l.012-7.8A2.5 2.5 0 0086.5 53zM64.26 39.03a2.68 2.68 0 00-4.05-.42L47.69 51V2.5a2.5 2.5 0 00-5 0v48.49L30.48 38.61a2.68 2.68 0 00-3.7 3.63l16.71 16.28a2.7 2.7 0 001.85.76c.7 0 1.36-.27 1.85-.76l16.63-16.2c.89-.86 1.13-2.26.44-3.29z'/></svg>") no-repeat center; background-size: contain; }
+.format-tags { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 16px; }
+.format-tag { background: #f3f4f6; border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; font-size: 11px; color: var(--muted); }
+#fileInput { display: none; }
+
+/* ─── EDITOR STATE ─── */
+#stateEditor { display: none; flex: 1; flex-direction: column; }
+
+/* TOOLBAR */
+.toolbar {
+  background: var(--toolbar-bg);
+  border-bottom: 1px solid var(--toolbar-border);
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  height: 46px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+  gap: 2px;
+}
+.toolbar::-webkit-scrollbar { display: none; }
+.tool-tab {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 10px; border-radius: 6px;
+  border: none; background: transparent;
+  color: var(--text); font-size: 12px; font-weight: 400;
+  font-family: inherit; cursor: pointer; white-space: nowrap;
+  transition: all 0.15s;
+}
+.tool-tab:hover { background: rgba(0,0,0,0.05); }
+.tool-tab.active { background: var(--tool-active-bg); color: var(--tool-active-color); }
+.tool-icon { width: 16px; height: 16px; flex-shrink: 0; }
+.toolbar-sep { width: 1px; height: 24px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
+.toolbar-right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.btn-toolbar {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--muted); border-radius: 5px;
+  padding: 5px 10px; font-size: 12px; cursor: pointer;
+  font-family: inherit; transition: all 0.15s;
+}
+.btn-toolbar:hover { border-color: #999; color: var(--text); }
+
+/* VIDEO PREVIEW */
+.editor-body { display: flex; flex: 1; min-height: 0; }
+.video-wrap {
+  flex: 1;
+  background: var(--video-bg);
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden; min-height: 220px;
+}
+#videoEl { max-width: 100%; max-height: 100%; display: block; }
+.play-btn-overlay {
+  position: absolute;
+  width: 54px; height: 54px;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(4px);
+  border-radius: 50%; border: none;
+  color: #fff; font-size: 20px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.2s;
+}
+.video-wrap:hover .play-btn-overlay { opacity: 1; }
+
+/* SIDE PANEL */
+.side-panel {
+  width: 220px; flex-shrink: 0;
+  border-left: 1px solid var(--border);
+  background: #fff;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.panel-sec-title {
+  font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 1px;
+  color: var(--muted); margin-bottom: 8px;
+}
+/* Rotate grid */
+.tf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.tf-btn {
+  background: #f9fafb; border: 1px solid var(--border);
+  border-radius: 6px; padding: 10px 6px;
+  font-family: inherit; font-size: 11px; color: var(--text);
+  cursor: pointer; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  transition: all 0.15s;
+}
+.tf-btn:hover { border-color: var(--accent); }
+.tf-btn.on { border-color: var(--accent); color: var(--accent); background: rgba(41,98,255,0.06); }
+.tf-btn .icon { font-size: 20px; line-height: 1; }
+.tf-btn .lbl { font-size: 10px; color: var(--muted); }
+.tf-btn.on .lbl { color: var(--accent); }
+
+/* Speed */
+.speed-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+.sp-btn {
+  flex: 1; min-width: 40px;
+  background: #f9fafb; border: 1px solid var(--border);
+  border-radius: 5px; padding: 7px 4px;
+  font-size: 12px; font-weight: 600; text-align: center;
+  cursor: pointer; font-family: inherit;
+  transition: all 0.15s;
+}
+.sp-btn:hover { border-color: #f59e0b; }
+.sp-btn.on { background: rgba(245,158,11,0.1); border-color: #f59e0b; color: #b45309; }
+
+/* Format */
+.fmt-grid { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+.fm-btn {
+  flex: 1; min-width: 38px;
+  background: #f9fafb; border: 1px solid var(--border);
+  border-radius: 5px; padding: 7px 4px;
+  font-size: 12px; font-weight: 700; text-align: center;
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.fm-btn:hover, .fm-btn.on {
+  background: rgba(41,98,255,0.07);
+  border-color: var(--accent); color: var(--accent);
+}
+.quality-row { display: flex; gap: 4px; }
+.ql-btn {
+  flex: 1; background: #f9fafb; border: 1px solid var(--border);
+  border-radius: 5px; padding: 6px 4px;
+  font-size: 11px; text-align: center;
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.ql-btn.on { background: rgba(34,197,94,0.08); border-color: var(--success); color: #15803d; }
+
+/* BOTTOM NAVIGATION */
+.nav-bottom {
+  background: #fff; border-top: 1px solid var(--border);
+  padding: 10px 14px;
+  flex-shrink: 0;
+}
+.file-info-bar {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+}
+.file-info-name { font-size: 12px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-info-meta { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.btn-change { background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; font-size: 11px; cursor: pointer; color: var(--muted); transition: all 0.15s; }
+.btn-change:hover { border-color: #999; color: var(--text); }
+
+/* STORYBOARD TIMELINE */
+.storyboard {
+  position: relative;
+  height: 50px;
+  background: var(--timeline-bg);
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: crosshair;
+  margin-bottom: 8px;
+  display: flex;
+}
+.sb-frames { display: flex; height: 50px; flex: 1; overflow: hidden; }
+.sb-frame { flex-shrink: 0; height: 50px; overflow: hidden; background: #333; border-right: 1px solid rgba(0,0,0,0.3); }
+.sb-frame img { width: 100%; height: 50px; object-fit: cover; display: block; }
+.sb-frame.loading { animation: pulse 1.2s infinite; }
+@keyframes pulse { 0%,100%{opacity:0.5} 50%{opacity:0.9} }
+
+.sb-overlay { position: absolute; inset: 0; pointer-events: none; }
+.sb-mask { position: absolute; top: 0; bottom: 0; background: var(--timeline-mask); z-index: 2; }
+.sb-mask-l { left: 0; }
+.sb-mask-r { right: 0; }
+.sb-selection {
+  position: absolute; top: 0; bottom: 0;
+  border: 2px solid var(--handle-color);
+  z-index: 3; pointer-events: none;
+}
+.sb-handle {
+  position: absolute; top: 0; bottom: 0;
+  width: 14px; cursor: ew-resize;
+  z-index: 5; pointer-events: all;
+  display: flex; align-items: center; justify-content: center;
+}
+.sb-handle-bar { width: 4px; height: 28px; background: var(--handle-color); border-radius: 2px; }
+.sb-handle-l { left: 0; transform: translateX(-50%); }
+.sb-handle-r { right: 0; transform: translateX(50%); }
+.sb-playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; z-index: 4; pointer-events: none; }
+.sb-timehint {
+  position: absolute; top: -24px;
+  background: rgba(0,0,0,0.7);
+  color: #fff; border-radius: 4px;
+  padding: 2px 6px; font-size: 11px;
+  transform: translateX(-50%);
+  pointer-events: none; white-space: nowrap;
+  display: none; z-index: 10;
+}
+
+/* CONTROLS ROW */
+.controls-row {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.btn-play {
+  width: 34px; height: 34px;
+  background: #f3f4f6; border: 1px solid var(--border);
+  border-radius: 50%; cursor: pointer; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all 0.15s;
+}
+.btn-play:hover { background: var(--border); }
+.time-stepper {
+  display: flex; align-items: center; gap: 1px;
+  background: #f9fafb; border: 1px solid var(--border);
+  border-radius: 5px; padding: 4px 8px;
+  font-size: 14px; font-variant-numeric: tabular-nums;
+}
+.t-inp {
+  background: transparent; border: none; outline: none;
+  width: 22px; text-align: center;
+  font-family: inherit; font-size: 14px;
+  color: var(--text);
+}
+.t-sep { color: #aaa; font-size: 13px; }
+.dash-sep { color: var(--muted); margin: 0 2px; }
+.btn-invert {
+  background: #f9fafb; border: 1px solid var(--border);
+  border-radius: 5px; padding: 5px 10px;
+  font-size: 12px; cursor: pointer; font-family: inherit;
+  color: var(--muted); transition: all 0.15s;
+  display: flex; align-items: center; gap: 4px;
+}
+.btn-invert:hover { border-color: #999; color: var(--text); }
+.btn-invert.on { background: rgba(245,158,11,0.1); border-color: #f59e0b; color: #b45309; }
+.dur-chip {
+  background: var(--accent); color: #fff;
+  border-radius: 12px; padding: 3px 10px;
+  font-size: 12px; font-weight: 500;
+  margin-left: auto;
+}
+.btn-save {
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 5px;
+  padding: 9px 22px; font-size: 14px; font-weight: 500;
+  font-family: inherit; cursor: pointer;
+  transition: background 0.2s; white-space: nowrap;
+  display: flex; align-items: center; gap: 6px;
+}
+.btn-save:hover { background: var(--accent-hover); }
+.btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* PROGRESS */
+#stateProgress {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+  z-index: 500; align-items: center; justify-content: center;
+}
+.progress-box {
+  background: #fff; border-radius: 16px;
+  padding: 32px 40px; text-align: center;
+  max-width: 360px; width: 90%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.spinner {
+  width: 48px; height: 48px;
+  border: 4px solid #e5e7eb;
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.progress-title { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+.progress-sub { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+.progress-bar { height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
+.progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.3s; width: 0%; }
+.progress-pct { font-size: 13px; color: var(--muted); }
+
+/* RESULT */
+#stateResult {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+  z-index: 500; align-items: center; justify-content: center;
+}
+.result-box {
+  background: #fff; border-radius: 16px;
+  padding: 32px 40px; text-align: center;
+  max-width: 360px; width: 90%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.result-icon { font-size: 48px; margin-bottom: 10px; }
+.result-title { font-size: 20px; font-weight: 700; color: var(--success); margin-bottom: 4px; }
+.result-meta { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+.btn-download {
+  width: 100%; background: var(--success); border: none;
+  border-radius: 6px; padding: 13px;
+  color: #fff; font-size: 15px; font-weight: 600;
+  font-family: inherit; cursor: pointer; margin-bottom: 8px;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: background 0.2s;
+}
+.btn-download:hover { background: #16a34a; }
+.btn-new {
+  width: 100%; background: transparent; border: 1px solid var(--border);
+  border-radius: 6px; padding: 10px;
+  color: var(--muted); font-size: 13px; font-family: inherit;
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-new:hover { border-color: #999; color: var(--text); }
+
+/* ERROR */
+.error-toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: #fef2f2; border: 1px solid #fca5a5;
+  color: var(--danger); border-radius: 8px;
+  padding: 10px 18px; font-size: 13px;
+  z-index: 1000; display: none; max-width: 90vw; text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.error-toast.show { display: block; }
+
+/* MOBILE */
+@media (max-width: 640px) {
+  .side-panel { display: none; }
+  .editor-body { flex-direction: column; }
+  .app-title h1 { font-size: 22px; }
+  .dur-chip { display: none; }
+}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <a href="#" class="logo">
+    <div class="logo-icon">✂️</div>
+    <span class="logo-text">ВидеоРез</span>
+  </a>
+  <span class="tg-badge">Telegram Mini App</span>
+</header>
+
+<!-- UPLOAD STATE -->
+<div id="stateUpload">
+  <div class="app-title">
+    <h1>Обрезать видео</h1>
+    <h2>Обрезать или вырезать фрагмент из видео любого формата</h2>
+  </div>
+  <div class="upload-area" id="uploadArea">
+    <div style="font-size:52px;margin-bottom:8px">🎬</div>
+    <div style="font-size:16px;font-weight:500;margin-bottom:8px">Выберите файл</div>
+    <div style="font-size:13px;color:#6b7280">Максимальный размер файла — 200 МБ</div>
+    <button class="upload-btn-big" id="btnOpen">📁 Выбрать файл</button>
+    <div class="drop-hint">или перетащите файл сюда</div>
+    <div class="format-tags">
+      <span class="format-tag">MP4</span>
+      <span class="format-tag">MOV</span>
+      <span class="format-tag">AVI</span>
+      <span class="format-tag">MKV</span>
+      <span class="format-tag">WEBM</span>
+      <span class="format-tag">3GP</span>
+    </div>
+    <input type="file" id="fileInput" accept="video/*">
+  </div>
+</div>
+
+<!-- EDITOR STATE -->
+<div id="stateEditor">
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <button class="tool-tab active" data-tool="cut" id="tabCut">
+      <svg class="tool-icon" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M3 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm7 7a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+        <path d="M5 3.5l8 9M11 3.5L3 12.5" stroke="currentColor" stroke-width="1.2" fill="none"/>
+      </svg>
+      Обрезка
+    </button>
+    <button class="tool-tab" data-tool="rotate" id="tabRotate">
+      <svg class="tool-icon" viewBox="0 0 16 16" fill="currentColor">
+        <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+      </svg>
+      Повернуть
+    </button>
+    <div class="toolbar-sep"></div>
+    <button class="tool-tab" data-tool="speed" id="tabSpeed">
+      <svg class="tool-icon" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 1a6 6 0 1 1 0 12A6 6 0 0 1 8 2z"/>
+        <path d="M8 5v3l3 1.5-.75 1.5L7 9V5z"/>
+      </svg>
+      Скорость
+    </button>
+    <button class="tool-tab" data-tool="format" id="tabFormat">
+      <svg class="tool-icon" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H4zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
+        <path d="M5.5 5a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 2a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 2a.5.5 0 0 0 0 1h2a.5.5 0 0 0 0-1h-2z"/>
+      </svg>
+      Формат
+    </button>
+    <div class="toolbar-right">
+      <button class="btn-toolbar" id="btnReset">Сбросить</button>
+    </div>
+  </div>
+
+  <!-- BODY: VIDEO + SIDE PANEL -->
+  <div class="editor-body">
+    <div class="video-wrap">
+      <video id="videoEl" preload="metadata" playsinline></video>
+      <button class="play-btn-overlay" id="btnPlayOverlay">▶</button>
+    </div>
+
+    <div class="side-panel" id="sidePanel">
+      <!-- CUT panel -->
+      <div id="panelCut">
+        <div class="panel-sec-title">✂️ Обрезка</div>
+        <p style="font-size:11px;color:#6b7280;line-height:1.55">Перетащите маркеры на таймлайне внизу чтобы выбрать начало и конец фрагмента.</p>
+      </div>
+      <!-- ROTATE panel -->
+      <div id="panelRotate" style="display:none">
+        <div class="panel-sec-title">🔄 Поворот</div>
+        <div class="tf-grid">
+          <button class="tf-btn" id="btnR90"><span class="icon">↻</span><span class="lbl">90°</span></button>
+          <button class="tf-btn" id="btnR180"><span class="icon">↺</span><span class="lbl">180°</span></button>
+          <button class="tf-btn" id="btnFlipH"><span class="icon">⇔</span><span class="lbl">Горизонталь</span></button>
+          <button class="tf-btn" id="btnFlipV"><span class="icon">⇕</span><span class="lbl">Вертикаль</span></button>
+        </div>
+      </div>
+      <!-- SPEED panel -->
+      <div id="panelSpeed" style="display:none">
+        <div class="panel-sec-title">⚡ Скорость</div>
+        <div class="speed-grid">
+          <button class="sp-btn" data-sp="0.5">0.5×</button>
+          <button class="sp-btn" data-sp="0.75">0.75×</button>
+          <button class="sp-btn on" data-sp="1">1×</button>
+          <button class="sp-btn" data-sp="1.5">1.5×</button>
+          <button class="sp-btn" data-sp="2">2×</button>
+        </div>
+      </div>
+      <!-- FORMAT panel -->
+      <div id="panelFormat" style="display:none">
+        <div class="panel-sec-title">📦 Формат</div>
+        <div class="fmt-grid">
+          <button class="fm-btn on" data-fmt="mp4">MP4</button>
+          <button class="fm-btn" data-fmt="webm">WEBM</button>
+          <button class="fm-btn" data-fmt="mov">MOV</button>
+          <button class="fm-btn" data-fmt="gif">GIF</button>
+        </div>
+        <div class="panel-sec-title" style="margin-top:10px">🎨 Качество</div>
+        <div class="quality-row">
+          <button class="ql-btn" data-q="low">Низкое</button>
+          <button class="ql-btn on" data-q="medium">Среднее</button>
+          <button class="ql-btn" data-q="high">Высокое</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="nav-bottom">
+    <div class="file-info-bar">
+      <span class="file-info-name" id="infoName">—</span>
+      <span class="file-info-meta" id="infoMeta">—</span>
+      <button class="btn-change" id="btnChange">Сменить</button>
+    </div>
+
+    <!-- Timeline -->
+    <div class="storyboard" id="storyboard">
+      <div class="sb-frames" id="sbFrames"></div>
+      <div class="sb-overlay">
+        <div class="sb-mask sb-mask-l" id="sbMaskL"></div>
+        <div class="sb-mask sb-mask-r" id="sbMaskR"></div>
+        <div class="sb-selection" id="sbSel"></div>
+        <div class="sb-handle sb-handle-l" id="sbHandleL"><div class="sb-handle-bar"></div></div>
+        <div class="sb-handle sb-handle-r" id="sbHandleR"><div class="sb-handle-bar"></div></div>
+        <div class="sb-playhead" id="sbPlayhead"></div>
+        <div class="sb-timehint" id="sbHint"></div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls-row">
+      <button class="btn-play" id="btnPlay">▶</button>
+      <!-- Start time -->
+      <div class="time-stepper">
+        <input class="t-inp" id="tsM1" value="00" maxlength="2">
+        <span class="t-sep">:</span>
+        <input class="t-inp" id="tsS1" value="00" maxlength="2">
+        <span class="t-sep">.</span>
+        <input class="t-inp" id="tsF1" value="0" maxlength="1" style="width:14px">
+      </div>
+      <span class="dash-sep">—</span>
+      <!-- End time -->
+      <div class="time-stepper">
+        <input class="t-inp" id="tsM2" value="00" maxlength="2">
+        <span class="t-sep">:</span>
+        <input class="t-inp" id="tsS2" value="00" maxlength="2">
+        <span class="t-sep">.</span>
+        <input class="t-inp" id="tsF2" value="0" maxlength="1" style="width:14px">
+      </div>
+      <button class="btn-invert" id="btnInvert">⇄ Вырезать</button>
+      <span class="dur-chip" id="durChip">0:00</span>
+      <div style="margin-left:auto">
+        <button class="btn-save" id="btnSave">
+          <span>Сохранить</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROGRESS -->
+<div id="stateProgress">
+  <div class="progress-box">
+    <div class="spinner"></div>
+    <div class="progress-title" id="progTitle">Загружаем файл...</div>
+    <div class="progress-sub" id="progSub">Подождите</div>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <div class="progress-pct" id="progPct">0%</div>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div id="stateResult">
+  <div class="result-box">
+    <div class="result-icon">✅</div>
+    <div class="result-title">Готово!</div>
+    <div class="result-meta" id="resMeta">—</div>
+    <button class="btn-download" id="btnDownload">⬇️ Скачать видео</button>
+    <button class="btn-new" id="btnNew">+ Обрезать другое видео</button>
+  </div>
+</div>
+
+<!-- ERROR TOAST -->
+<div class="error-toast" id="errToast"></div>
+
+<script>
+// ==================== STATE ====================
+const API = ''; // same origin
+let videoFile = null;
+let fileId = null;
+let outId = null, outFmt = 'mp4';
+let videoDur = 0;
+let startTime = 0, endTime = 0;
+let rotation = 0, rotAngle = 0, flipH = false, flipV = false;
+let speed = 1, format = 'mp4', quality = 'medium';
+let invert = false;
+let dragging = null;
+
+// ==================== DOM ====================
+const $ = id => document.getElementById(id);
+const su = $('stateUpload'), se = $('stateEditor');
+const sp = $('stateProgress'), sr = $('stateResult');
+const fInp = $('fileInput');
+const videoEl = $('videoEl');
+const storyboard = $('storyboard');
+const sbFrames = $('sbFrames');
+const sbMaskL = $('sbMaskL'), sbMaskR = $('sbMaskR'), sbSel = $('sbSel');
+const sbHandleL = $('sbHandleL'), sbHandleR = $('sbHandleR');
+const sbPlayhead = $('sbPlayhead'), sbHint = $('sbHint');
+const tsM1=$('tsM1'),tsS1=$('tsS1'),tsF1=$('tsF1');
+const tsM2=$('tsM2'),tsS2=$('tsS2'),tsF2=$('tsF2');
+const durChip=$('durChip'), progFill=$('progFill'), progPct=$('progPct');
+const progTitle=$('progTitle'), progSub=$('progSub');
+
+// ==================== UTILS ====================
+const fmtT = s => {
+  s = Math.max(0, s);
+  return `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+};
+const fmtSize = b => b < 1048576 ? (b/1024).toFixed(1)+' КБ' : (b/1048576).toFixed(1)+' МБ';
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+function showErr(msg) {
+  const t = $('errToast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+// ==================== UPLOAD ====================
+$('btnOpen').onclick = () => fInp.click();
+$('uploadArea').onclick = e => { if (e.target !== $('btnOpen')) fInp.click(); };
+fInp.onchange = () => { if (fInp.files[0]) handleFile(fInp.files[0]); };
+$('uploadArea').ondragover = e => { e.preventDefault(); $('uploadArea').classList.add('drag-over'); };
+$('uploadArea').ondragleave = () => $('uploadArea').classList.remove('drag-over');
+$('uploadArea').ondrop = e => { e.preventDefault(); $('uploadArea').classList.remove('drag-over'); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); };
+
+async function handleFile(f) {
+  if (!f.type.startsWith('video/') && !/\.(mp4|mov|avi|mkv|webm|3gp|flv|wmv|m4v)$/i.test(f.name)) {
+    return showErr('Пожалуйста, выберите видео файл');
+  }
+  if (f.size > 200 * 1024 * 1024) {
+    return showErr('Файл слишком большой. Максимум 200 МБ');
+  }
+  videoFile = f;
+
+  // Show local preview immediately
+  const localUrl = URL.createObjectURL(f);
+  videoEl.src = localUrl;
+  videoEl.onloadedmetadata = () => {
+    videoDur = videoEl.duration;
+    startTime = 0; endTime = videoDur;
+    $('infoName').textContent = f.name;
+    $('infoMeta').textContent = fmtSize(f.size) + ' · ' + fmtT(videoDur);
+    updateTimeInputs();
+    su.style.display = 'none';
+    se.style.display = 'flex';
+    se.style.flexDirection = 'column';
+    generateFrames();
+    updateSB();
+  };
+
+  // Upload to server in background
+  uploadFile(f);
+}
+
+async function uploadFile(f) {
+  showProgress('Загружаем файл...', 'Пожалуйста, подождите');
+  try {
+    const fd = new FormData();
+    fd.append('video', f, f.name);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/upload');
+    xhr.upload.onprogress = e => {
+      if (e.lengthComputable) {
+        const p = Math.round(e.loaded / e.total * 100);
+        setProgress(p, `Загрузка: ${p}%`);
+      }
+    };
+
+    const result = await new Promise((resolve, reject) => {
+      xhr.onload = () => {
+        if (xhr.status === 200) resolve(JSON.parse(xhr.responseText));
+        else reject(new Error(JSON.parse(xhr.responseText).error || 'Upload failed'));
+      };
+      xhr.onerror = () => reject(new Error('Network error'));
+      xhr.send(fd);
+    });
+
+    fileId = result.fileId;
+    hideProgress();
+  } catch(e) {
+    hideProgress();
+    showErr('Ошибка загрузки: ' + e.message);
+  }
+}
+
+// ==================== PROGRESS ====================
+function showProgress(title, sub) {
+  progTitle.textContent = title;
+  progSub.textContent = sub;
+  progFill.style.width = '0%';
+  progPct.textContent = '0%';
+  sp.style.display = 'flex';
+}
+function setProgress(pct, sub) {
+  progFill.style.width = pct + '%';
+  progPct.textContent = pct + '%';
+  if (sub) progSub.textContent = sub;
+}
+function hideProgress() { sp.style.display = 'none'; }
+
+// ==================== TOOL TABS ====================
+const panels = { cut:'panelCut', rotate:'panelRotate', speed:'panelSpeed', format:'panelFormat' };
+document.querySelectorAll('.tool-tab').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.tool-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    Object.entries(panels).forEach(([k,v]) => $(v).style.display = k===btn.dataset.tool ? '' : 'none');
+  };
+});
+
+// ==================== VIDEO PLAY ====================
+function togglePlay() {
+  if (videoEl.paused) {
+    if (videoEl.currentTime < startTime || videoEl.currentTime >= endTime) videoEl.currentTime = startTime;
+    videoEl.play(); $('btnPlay').textContent = '⏸'; $('btnPlayOverlay').textContent = '⏸';
+  } else {
+    videoEl.pause(); $('btnPlay').textContent = '▶'; $('btnPlayOverlay').textContent = '▶';
+  }
+}
+$('btnPlay').onclick = togglePlay;
+$('btnPlayOverlay').onclick = togglePlay;
+videoEl.ontimeupdate = () => {
+  if (videoEl.currentTime >= endTime) {
+    videoEl.pause(); videoEl.currentTime = endTime;
+    $('btnPlay').textContent = '▶'; $('btnPlayOverlay').textContent = '▶';
+  }
+  updatePlayhead();
+};
+
+// ==================== TRANSFORMS ====================
+$('btnR90').onclick = () => { rotAngle = (rotAngle+90)%360; rotation=rotAngle; updateTransform(); updateRotBtns(); };
+$('btnR180').onclick = () => { rotAngle = (rotAngle+180)%360; rotation=rotAngle; updateTransform(); updateRotBtns(); };
+$('btnFlipH').onclick = () => { flipH=!flipH; $('btnFlipH').classList.toggle('on',flipH); updateTransform(); };
+$('btnFlipV').onclick = () => { flipV=!flipV; $('btnFlipV').classList.toggle('on',flipV); updateTransform(); };
+function updateRotBtns() {
+  $('btnR90').classList.toggle('on', rotAngle!==0);
+  $('btnR180').classList.toggle('on', rotAngle===180||rotAngle===270);
+}
+function updateTransform() {
+  let t = `rotate(${rotAngle}deg)`;
+  if (flipH) t += ' scaleX(-1)';
+  if (flipV) t += ' scaleY(-1)';
+  videoEl.style.transform = t;
+}
+
+// ==================== SPEED ====================
+document.querySelectorAll('.sp-btn').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.sp-btn').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); speed = parseFloat(b.dataset.sp);
+  videoEl.playbackRate = speed;
+});
+
+// ==================== FORMAT ====================
+document.querySelectorAll('.fm-btn').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.fm-btn').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); format = b.dataset.fmt;
+});
+document.querySelectorAll('.ql-btn').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.ql-btn').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); quality = b.dataset.q;
+});
+
+// ==================== INVERT ====================
+$('btnInvert').onclick = () => { invert=!invert; $('btnInvert').classList.toggle('on',invert); };
+
+// ==================== RESET ====================
+$('btnReset').onclick = resetAll;
+$('btnChange').onclick = () => {
+  se.style.display = 'none'; su.style.display = '';
+  fInp.value = ''; videoFile = null; fileId = null;
+  videoEl.src = ''; sbFrames.innerHTML = '';
+};
+function resetAll() {
+  startTime=0; endTime=videoDur; rotation=0; rotAngle=0;
+  flipH=false; flipV=false; speed=1; format='mp4'; quality='medium'; invert=false;
+  document.querySelectorAll('.tf-btn').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.sp-btn').forEach(b=>b.classList.toggle('on',b.dataset.sp==='1'));
+  document.querySelectorAll('.fm-btn').forEach(b=>b.classList.toggle('on',b.dataset.fmt==='mp4'));
+  document.querySelectorAll('.ql-btn').forEach(b=>b.classList.toggle('on',b.dataset.q==='medium'));
+  $('btnInvert').classList.remove('on');
+  videoEl.style.transform = ''; videoEl.playbackRate = 1;
+  updateTimeInputs(); updateSB();
+}
+
+// ==================== TIME INPUTS ====================
+function readTime(m,s,f) { return (parseInt(m.value)||0)*60 + (parseInt(s.value)||0) + (parseInt(f.value)||0)*0.1; }
+function updateTimeInputs() {
+  tsM1.value = String(Math.floor(startTime/60)).padStart(2,'0');
+  tsS1.value = String(Math.floor(startTime%60)).padStart(2,'0');
+  tsF1.value = String(Math.floor((startTime%1)*10));
+  tsM2.value = String(Math.floor(endTime/60)).padStart(2,'0');
+  tsS2.value = String(Math.floor(endTime%60)).padStart(2,'0');
+  tsF2.value = String(Math.floor((endTime%1)*10));
+  durChip.textContent = fmtT(Math.max(0, endTime-startTime));
+}
+[tsM1,tsS1,tsF1].forEach(inp => inp.oninput = () => {
+  startTime = clamp(readTime(tsM1,tsS1,tsF1), 0, endTime-0.1);
+  updateSB(); videoEl.currentTime = startTime;
+});
+[tsM2,tsS2,tsF2].forEach(inp => inp.oninput = () => {
+  endTime = clamp(readTime(tsM2,tsS2,tsF2), startTime+0.1, videoDur);
+  updateSB(); videoEl.currentTime = endTime;
+  updateTimeInputs();
+});
+
+// ==================== STORYBOARD ====================
+function updateSB() {
+  if (!videoDur) return;
+  const lp = (startTime/videoDur)*100, rp = (endTime/videoDur)*100;
+  sbMaskL.style.width = lp + '%';
+  sbMaskR.style.width = (100-rp) + '%';
+  sbSel.style.left = lp + '%';
+  sbSel.style.right = (100-rp) + '%';
+  updateTimeInputs();
+}
+function updatePlayhead() {
+  if (!videoDur) return;
+  sbPlayhead.style.left = (videoEl.currentTime/videoDur)*100 + '%';
+}
+
+async function generateFrames() {
+  const W = storyboard.offsetWidth || 400;
+  const n = Math.max(4, Math.floor(W/28));
+  sbFrames.innerHTML = '';
+  const fw = Math.floor(W/n);
+  const divs = [];
+  for (let i=0; i<n; i++) {
+    const d = document.createElement('div');
+    d.className = 'sb-frame loading';
+    d.style.width = fw + 'px';
+    sbFrames.appendChild(d);
+    divs.push(d);
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = 56; canvas.height = 50;
+  const ctx = canvas.getContext('2d');
+  for (let i=0; i<n; i++) {
+    const t = (i/(Math.max(1,n-1))) * videoDur;
+    try {
+      await new Promise(res => {
+        videoEl.currentTime = t;
+        const h = () => { videoEl.removeEventListener('seeked',h); res(); };
+        videoEl.addEventListener('seeked', h);
+      });
+      ctx.drawImage(videoEl, 0, 0, 56, 50);
+      const img = document.createElement('img');
+      img.src = canvas.toDataURL('image/jpeg', 0.6);
+      divs[i].innerHTML = '';
+      divs[i].appendChild(img);
+      divs[i].classList.remove('loading');
+    } catch(e) {}
+  }
+  videoEl.currentTime = 0;
+}
+
+// SB drag
+storyboard.onmousedown = storyboard.ontouchstart = e => {
+  const touch = e.touches?.[0];
+  const target = touch ? document.elementFromPoint(touch.clientX, touch.clientY) : e.target;
+  const rect = storyboard.getBoundingClientRect();
+  const x = (touch ? touch.clientX : e.clientX) - rect.left;
+  if (sbHandleL.contains(target) || target===sbHandleL) dragging='start';
+  else if (sbHandleR.contains(target) || target===sbHandleR) dragging='end';
+  else {
+    // click on timeline = seek
+    const t = clamp((x/rect.width)*videoDur, 0, videoDur);
+    videoEl.currentTime = t; updatePlayhead(); return;
+  }
+  e.preventDefault();
+};
+const onMove = e => {
+  if (!dragging) return;
+  const touch = e.touches?.[0];
+  const rect = storyboard.getBoundingClientRect();
+  const x = (touch ? touch.clientX : e.clientX) - rect.left;
+  const p = clamp(x/rect.width, 0, 1);
+  const t = p * videoDur;
+  if (dragging==='start') { startTime = clamp(t, 0, endTime-0.1); videoEl.currentTime=startTime; }
+  else { endTime = clamp(t, startTime+0.1, videoDur); videoEl.currentTime=endTime; }
+  updateSB();
+  sbHint.style.left = (p*100)+'%';
+  sbHint.textContent = fmtT(t);
+  sbHint.style.display = 'block';
+};
+const onUp = () => { dragging=null; sbHint.style.display='none'; };
+document.addEventListener('mousemove', onMove);
+document.addEventListener('touchmove', onMove, { passive:false });
+document.addEventListener('mouseup', onUp);
+document.addEventListener('touchend', onUp);
+
+// ==================== SAVE / PROCESS ====================
+$('btnSave').onclick = processVideo;
+
+async function processVideo() {
+  if (!fileId) {
+    // Still uploading, wait a bit
+    if (!videoFile) return showErr('Нет файла');
+    showErr('Файл ещё загружается. Подождите...');
+    return;
+  }
+  showProgress('Обрабатываем видео...', 'FFmpeg на сервере работает');
+  setProgress(5, 'Отправка параметров...');
+
+  try {
+    const body = {
+      fileId, startTime, endTime, rotation, flipH, flipV,
+      speed, format, quality, invert
+    };
+    setProgress(10, 'Обработка видео...');
+
+    const r = await fetch('/api/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      throw new Error(e.error || 'Server error');
+    }
+
+    setProgress(90, 'Готовим файл...');
+    const data = await r.json();
+    outId = data.outId;
+    outFmt = data.format;
+
+    setProgress(100, 'Готово!');
+    setTimeout(() => {
+      hideProgress();
+      sr.style.display = 'flex';
+      $('resMeta').textContent = `${fmtSize(data.fileSize)} · ${fmtT(endTime-startTime)} · ${outFmt.toUpperCase()}`;
+    }, 300);
+
+  } catch(e) {
+    hideProgress();
+    showErr('Ошибка обработки: ' + e.message);
+  }
+}
+
+// ==================== DOWNLOAD ====================
+$('btnDownload').onclick = () => {
+  if (!outId) return;
+  const baseName = videoFile?.name?.replace(/\.[^.]+$/, '') || 'video';
+  const a = document.createElement('a');
+  a.href = `/api/download?outId=${outId}&format=${outFmt}&name=${encodeURIComponent(baseName)}`;
+  a.download = `${baseName}_cut.${outFmt}`;
+  a.click();
+  // Telegram close
+  if (window.Telegram?.WebApp) window.Telegram.WebApp.close();
+};
+
+$('btnNew').onclick = () => {
+  sr.style.display = 'none';
+  se.style.display = 'none';
+  su.style.display = '';
+  fInp.value = ''; videoFile = null; fileId = null; outId = null;
+  videoEl.src = ''; sbFrames.innerHTML = '';
+  resetAll();
+};
+
+// ==================== TELEGRAM ====================
+if (window.Telegram?.WebApp) {
+  window.Telegram.WebApp.ready();
+  window.Telegram.WebApp.expand();
+}
+
+window.addEventListener('resize', () => { if (videoDur) updateSB(); });
+</script>
+</body>
+</html>
