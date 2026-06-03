@@ -1,23 +1,12 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/handler.py",
-      "use": "@vercel/python"
-    }
+  "rewrites": [
+    { "source": "/",        "destination": "/public/index.html" },
+    { "source": "/api/:path*", "destination": "/api/:path*" }
   ],
-  "routes": [
-    {
-      "src": "/api/.*",
-      "dest": "api/handler.py"
-    },
-    {
-      "src": "/.*",
-      "dest": "api/handler.py"
-    }
-  ],
-  "env": {
-    "TELEGRAM_BOT_TOKEN": "@telegram_bot_token",
-    "WEBHOOK_URL": "@webhook_url"
+  "functions": {
+    "api/upload.js":  { "maxDuration": 30 },
+    "api/webhook.js": { "maxDuration": 10 },
+    "api/setup.js":   { "maxDuration": 10 }
   }
 }

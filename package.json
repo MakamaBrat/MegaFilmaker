@@ -1,0 +1,12 @@
+{
+  "name": "videocutter-telegram",
+  "version": "2.0.0",
+  "description": "Video cutter Telegram Mini App — всё в браузере, сервер только для отправки в Telegram",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
