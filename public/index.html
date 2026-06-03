@@ -14,8 +14,22 @@
   --border: #e5e7eb;
   --success: #22c55e;
   --danger: #ef4444;
+  --app-h: 100vh;
 }
-body { font-family: 'Rubik','Segoe UI',sans-serif; background:#fff; color:var(--text); font-size:13px; font-weight:300; min-height:100vh; display:flex; flex-direction:column; }
+html, body { height: 100%; }
+body {
+  font-family: 'Rubik','Segoe UI',sans-serif;
+  background:#fff; color:var(--text);
+  font-size:13px; font-weight:300;
+  height: var(--app-h);
+  min-height: var(--app-h);
+  display:flex; flex-direction:column;
+  overflow: hidden;
+}
+/* Современные браузеры — динамическая высота (учитывает адресную строку) */
+@supports (height: 100dvh) {
+  body { height: 100dvh; min-height: 100dvh; }
+}
 
 /* HEADER */
 .header { background:#101114; height:52px; display:flex; align-items:center; padding:0 16px; gap:10px; flex-shrink:0; }
@@ -24,7 +38,7 @@ body { font-family: 'Rubik','Segoe UI',sans-serif; background:#fff; color:var(--
 .tg-badge { margin-left:auto; background:rgba(41,98,255,.2); color:#7baeff; border:1px solid rgba(41,98,255,.35); border-radius:20px; padding:3px 10px; font-size:11px; }
 
 /* UPLOAD */
-#stateUpload { max-width:540px; margin:0 auto; padding:0 16px 40px; width:100%; }
+#stateUpload { max-width:540px; margin:0 auto; padding:0 16px 40px; width:100%; overflow-y:auto; flex:1; }
 .app-title { text-align:center; padding:28px 16px 20px; }
 .app-title h1 { font-size:26px; font-weight:700; margin-bottom:6px; }
 .app-title h2 { font-size:14px; color:var(--muted); font-weight:300; }
@@ -88,17 +102,17 @@ body { font-family: 'Rubik','Segoe UI',sans-serif; background:#fff; color:var(--
 .chbtn:hover { border-color:#999; color:var(--text); }
 
 /* STORYBOARD */
-.sb { position:relative; height:50px; background:#2a2a2a; border-radius:4px; overflow:hidden; cursor:crosshair; margin-bottom:8px; display:flex; }
-.sbframes { display:flex; height:50px; flex:1; overflow:hidden; }
-.sbframe { flex-shrink:0; height:50px; overflow:hidden; background:#333; border-right:1px solid rgba(0,0,0,.3); }
-.sbframe img { width:100%; height:50px; object-fit:cover; display:block; }
+.sb { position:relative; height:54px; background:#2a2a2a; border-radius:4px; overflow:hidden; cursor:crosshair; margin-bottom:8px; display:flex; touch-action:none; user-select:none; -webkit-user-select:none; }
+.sbframes { display:flex; height:100%; flex:1; overflow:hidden; }
+.sbframe { flex-shrink:0; height:100%; overflow:hidden; background:#333; border-right:1px solid rgba(0,0,0,.3); }
+.sbframe img { width:100%; height:100%; object-fit:cover; display:block; }
 .sbframe.ld { animation:pulse 1.2s infinite; }
 @keyframes pulse { 0%,100%{opacity:.5} 50%{opacity:.9} }
 .sbov { position:absolute; inset:0; pointer-events:none; }
 .sbmask { position:absolute; top:0; bottom:0; background:rgba(0,0,0,.55); z-index:2; }
 .sbsel { position:absolute; top:0; bottom:0; border:2px solid #2962ff; z-index:3; pointer-events:none; }
 .sbh { position:absolute; top:0; bottom:0; width:44px; cursor:ew-resize; z-index:5; pointer-events:all; display:flex; align-items:center; justify-content:center; }
-.sbhbar { width:4px; height:28px; background:#2962ff; border-radius:2px; }
+.sbhbar { width:5px; height:60%; background:#2962ff; border-radius:3px; box-shadow:0 0 0 1px rgba(255,255,255,.3); }
 .sbhl { left:0; transform:translateX(-50%); }
 .sbhr { right:0; transform:translateX(50%); }
 .sbph { position:absolute; top:0; bottom:0; width:2px; background:#fff; z-index:4; pointer-events:none; }
@@ -322,6 +336,22 @@ body { font-family: 'Rubik','Segoe UI',sans-serif; background:#fff; color:var(--
 <script>
 // Без FFmpeg — используем MediaRecorder + Canvas API
 
+// ── Telegram viewport height (правильная высота под смартфон) ──
+(function() {
+  const tg = window.Telegram?.WebApp;
+  function applyHeight() {
+    let h = window.innerHeight;
+    if (tg && tg.viewportStableHeight) h = tg.viewportStableHeight;
+    else if (tg && tg.viewportHeight) h = tg.viewportHeight;
+    document.documentElement.style.setProperty('--app-h', h + 'px');
+  }
+  applyHeight();
+  if (tg) {
+    tg.onEvent('viewportChanged', applyHeight);
+  }
+  window.addEventListener('resize', applyHeight);
+})();
+
 // ── STATE ──
 let videoFile = null, videoDur = 0;
 let startTime = 0, endTime = 0;
@@ -464,22 +494,30 @@ function updateSB() {
 function updatePH() { if(!videoDur) return; sbPH.style.left=(videoEl.currentTime/videoDur)*100+'%'; }
 
 async function generateFrames() {
-  const W=sbEl.offsetWidth||400, n=Math.max(4,Math.floor(W/28));
+  if(!videoDur) return;
+  const W=sbEl.offsetWidth||400, H=sbEl.offsetHeight||54;
+  const n=Math.max(4,Math.floor(W/28));
   sbFrames.innerHTML='';
   const fw=Math.floor(W/n), divs=[];
   for(let i=0;i<n;i++) { const d=document.createElement('div'); d.className='sbframe ld'; d.style.width=fw+'px'; sbFrames.appendChild(d); divs.push(d); }
-  const cv=document.createElement('canvas'); cv.width=56; cv.height=50;
+  const cv=document.createElement('canvas'); cv.width=Math.round(fw*1.6); cv.height=Math.round(H*1.6);
   const ctx=cv.getContext('2d');
+  // Запоминаем текущее время и состояние, чтобы вернуть после генерации
+  const wasPaused = videoEl.paused;
+  const savedTime = videoEl.currentTime;
+  videoEl.pause();
   for(let i=0;i<n;i++) {
     const t=(i/Math.max(1,n-1))*videoDur;
     try {
       await new Promise(res=>{ videoEl.currentTime=t; const h=()=>{ videoEl.removeEventListener('seeked',h); res(); }; videoEl.addEventListener('seeked',h); });
-      ctx.drawImage(videoEl,0,0,56,50);
+      ctx.drawImage(videoEl,0,0,cv.width,cv.height);
       const img=document.createElement('img'); img.src=cv.toDataURL('image/jpeg',.6);
       divs[i].innerHTML=''; divs[i].appendChild(img); divs[i].classList.remove('ld');
     } catch(e) {}
   }
-  videoEl.currentTime=0;
+  // Возвращаем на начало выбранного фрагмента, НЕ запускаем воспроизведение
+  videoEl.currentTime = startTime;
+  updatePH();
 }
 
 // SB drag — определяем ручку по близости к позиции start/end, не по elementFromPoint
@@ -648,7 +686,21 @@ G('btnSave').onclick = async () => {
       se.style.display = 'none';
       sr.style.display = 'flex';
       sr.style.flexDirection = 'column';
+      const tooBig = outBlob.size > 4.4 * 1024 * 1024;
       G('rmeta').textContent = `${fmtSz(outBlob.size)} · ${fmtT(totalDur / speed)} · ${ext.toUpperCase()}`;
+      const sendBtn = G('btnSendTg');
+      if (tooBig && tgApp) {
+        // Файл больше лимита Vercel — отправка не сработает, подсказываем скачать
+        sendBtn.disabled = true;
+        sendBtn.style.opacity = '0.5';
+        sendBtn.textContent = '⚠️ Слишком большое для Telegram';
+        G('rmeta').textContent += ' · слишком большое (>4.4МБ)';
+      } else {
+        sendBtn.disabled = false;
+        sendBtn.style.opacity = '1';
+        sendBtn.style.background = '#229ED9';
+        sendBtn.textContent = '📤 Отправить в Telegram';
+      }
       checkTgBtn();
     }, 300);
 
@@ -705,15 +757,29 @@ G('btnNew').onclick = () => {
 
 // Telegram
 const tgApp = window.Telegram?.WebApp;
-if (tgApp) { tgApp.ready(); tgApp.expand(); }
+let tgChatId = null;
+if (tgApp) {
+  tgApp.ready();
+  tgApp.expand();
+  tgChatId = tgApp.initDataUnsafe?.user?.id || null;
+  console.log('[app] Telegram chatId:', tgChatId);
+}
 
 function checkTgBtn() {
-  // Кнопка всегда видна — ничего не делаем, она уже в HTML
+  const btn = G('btnSendTg');
+  if (!tgApp) { btn.style.display = 'none'; } // в браузере скрываем
 }
 
 // ── ОТПРАВИТЬ В TELEGRAM ──
 G('btnSendTg').onclick = async () => {
   if (!outBlob) { showErr('Файл не найден, обработайте видео заново'); return; }
+
+  // Vercel лимит на загрузку — 4.5MB. Проверяем заранее.
+  const VERCEL_LIMIT = 4.4 * 1024 * 1024;
+  if (outBlob.size > VERCEL_LIMIT) {
+    showErr(`Видео слишком большое (${fmtSz(outBlob.size)}). Лимит 4.4 МБ. Уменьшите качество, длину или выберите формат WEBM.`);
+    return;
+  }
 
   const btn = G('btnSendTg');
   btn.disabled = true;
@@ -722,69 +788,58 @@ G('btnSendTg').onclick = async () => {
   const fname = (videoFile?.name?.replace(/\.[^.]+$/, '') || 'video') + '_cut.' + format;
 
   try {
-    // Загружаем файл на сервер
-    const fd = new FormData();
-    fd.append('file', outBlob, fname);
-
     sr.style.display = 'none';
     sp.style.display = 'flex'; sp.style.flexDirection = 'column';
-    G('ptitle').textContent = 'Загружаем видео...';
-    G('psub').textContent = 'Файл отправляется на сервер';
+    G('ptitle').textContent = 'Отправляем в Telegram...';
+    G('psub').textContent = 'Загрузка видео на сервер';
     G('pfill').style.width = '0%';
     G('ppct').textContent = '0%';
+
+    // Загружаем файл + chat_id + format. Сервер сам отправит видео в Telegram.
+    const fd = new FormData();
+    if (tgChatId) fd.append('chat_id', String(tgChatId));
+    fd.append('format', format);
+    fd.append('file', outBlob, fname);
 
     const resp = await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('POST', '/api/upload');
+      xhr.timeout = 120000;
       xhr.upload.onprogress = ev => {
         if (ev.lengthComputable) {
-          const pct = Math.round(ev.loaded / ev.total * 100);
+          const pct = Math.round(ev.loaded / ev.total * 90);
           G('pfill').style.width = pct + '%';
           G('ppct').textContent = pct + '%';
         }
       };
       xhr.onload = () => {
-        if (xhr.status === 200) resolve(JSON.parse(xhr.responseText));
-        else reject(new Error('HTTP ' + xhr.status));
+        if (xhr.status === 200) {
+          G('pfill').style.width = '100%';
+          G('ppct').textContent = '100%';
+          resolve(JSON.parse(xhr.responseText));
+        } else {
+          let msg = 'HTTP ' + xhr.status;
+          try { msg = JSON.parse(xhr.responseText).error || msg; } catch(e) {}
+          reject(new Error(msg));
+        }
       };
       xhr.onerror = () => reject(new Error('Ошибка сети'));
+      xhr.ontimeout = () => reject(new Error('Превышено время ожидания'));
       xhr.send(fd);
     });
 
-    if (tgApp) {
-      // Запущено внутри Telegram Mini App
-      // Подготавливаем данные для отправки боту
-      const data = {
-        action: 'send_video',
-        fileId: resp.fileId,
-        format: format,
-        name: fname
-      };
-      
-      console.log('[app] Отправляем в Telegram:', data);
-      
-      // ⚠️ ВАЖНО: sendData закроет приложение автоматически!
-      // Поэтому мы сначала показываем статус пользователю, потом отправляем
-      G('ptitle').textContent = '📤 Отправляем в Telegram...';
-      G('psub').textContent = 'Приложение закроется автоматически';
-      
-      // Даём приложению время показать сообщение перед закрытием
-      setTimeout(() => {
-        tgApp.sendData(JSON.stringify(data));
-        // После sendData приложение будет закрыто Telegram
-      }, 300);
-      
+    sp.style.display = 'none';
+    sr.style.display = 'flex'; sr.style.flexDirection = 'column';
+
+    if (resp.sent) {
+      G('rmeta').textContent = '✅ Видео отправлено в чат!';
+      btn.textContent = '✓ Отправлено';
+      btn.style.background = '#22c55e';
+      if (tgApp) setTimeout(() => tgApp.close(), 1500);
     } else {
-      // Запущено в браузере — просто скачиваем
-      sp.style.display = 'none';
-      sr.style.display = 'flex'; sr.style.flexDirection = 'column';
-      const url = URL.createObjectURL(outBlob);
-      const a = document.createElement('a');
-      a.href = url; a.download = fname;
-      document.body.appendChild(a); a.click();
-      setTimeout(() => { URL.revokeObjectURL(url); document.body.removeChild(a); }, 1000);
       btn.disabled = false;
       btn.textContent = '📤 Отправить в Telegram';
+      showErr('Не удалось определить пользователя Telegram');
     }
 
   } catch (e) {
@@ -795,7 +850,13 @@ G('btnSendTg').onclick = async () => {
     btn.textContent = '📤 Отправить в Telegram';
   }
 };
-window.addEventListener('resize',()=>{ if(videoDur) updateSB(); });
+let resizeTimer;
+window.addEventListener('resize',()=>{
+  if(!videoDur) return;
+  updateSB();
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(generateFrames, 300);
+});
 </script>
 
 </body>
