@@ -1,4 +1,4 @@
-// api/webhook.js — Telegram webhook с подробным логированием для отладки
+// api/webhook.js — ПРОСТАЯ ДИАГНОСТИЧЕСКАЯ ВЕРСИЯ
 const https = require('https');
 const fs    = require('fs');
 const path  = require('path');
@@ -28,129 +28,6 @@ function tgCall(method, body) {
     req.on('error', reject);
     req.write(payload);
     req.end();
-  });
-}
-
-// Отправить файл в Telegram ДОКУМЕНТОМ вместо видео (обходит лимит 50MB)
-function sendVideoToUser(chatId, fileId, fmt, name) {
-  return new Promise((resolve, reject) => {
-    // 🔴 ВАЖНО: Читаем файл локально, не через HTTP
-    const ext = fmt === 'gif' ? 'gif' : fmt === 'webm' ? 'webm' : fmt === 'mov' ? 'mov' : 'mp4';
-    const filePath = path.join('/tmp', `${fileId}.${ext}`);
-    
-    console.log(`\n[webhook DEBUG] ============================================`);
-    console.log(`[webhook DEBUG] Начало отправки видео`);
-    console.log(`[webhook DEBUG] fileId=${fileId}, format=${fmt}`);
-    console.log(`[webhook DEBUG] filePath=${filePath}`);
-
-    // Проверяем что файл СУЩЕСТВУЕТ
-    if (!fs.existsSync(filePath)) {
-      console.error(`[webhook DEBUG] ❌ ФАЙЛ НЕ НАЙДЕН!`);
-      
-      // Показываем какие файлы есть в /tmp
-      const tmpDir = '/tmp';
-      try {
-        const allFiles = fs.readdirSync(tmpDir);
-        const ourFiles = allFiles.filter(f => f.startsWith(fileId));
-        console.error(`[webhook DEBUG] Все файлы в /tmp: ${allFiles.slice(0, 20).join(', ')}...`);
-        console.error(`[webhook DEBUG] Файлы с ID ${fileId}: ${ourFiles.join(', ')}`);
-      } catch (e) {
-        console.error(`[webhook DEBUG] Ошибка чтения /tmp: ${e.message}`);
-      }
-      
-      return reject(new Error(`Файл не найден: ${filePath}`));
-    }
-
-    const stat = fs.statSync(filePath);
-    console.log(`[webhook DEBUG] ✓ Файл найден: ${stat.size} байт (${(stat.size / 1024 / 1024).toFixed(2)} MB)`);
-
-    // 🔴 ВАЖНО: Вместо sendVideo используем sendDocument (нет лимита 50MB!)
-    // Это обходит ошибку 413
-    const filename = name || `video.${ext}`;
-    const mime = 'application/octet-stream';  // Универсальный MIME тип
-    const tgMethod = 'sendDocument';  // ВСЕГДА используем sendDocument!
-    const fieldName = 'document';
-
-    console.log(`[webhook DEBUG] Отправляем как ДОКУМЕНТ (sendDocument)`);
-    console.log(`[webhook DEBUG] Размер для отправки: ${stat.size} байт`);
-
-    // Multipart upload STREAMING
-    const boundary = 'TGBound' + Date.now();
-    
-    const header = 
-      `--${boundary}\r\n` +
-      `Content-Disposition: form-data; name="chat_id"\r\n\r\n${chatId}\r\n` +
-      `--${boundary}\r\n` +
-      `Content-Disposition: form-data; name="${fieldName}"; filename="${filename}"\r\n` +
-      `Content-Type: ${mime}\r\n\r\n`;
-
-    const tail = `\r\n--${boundary}--\r\n`;
-    const headerBuf = Buffer.from(header);
-    const tailBuf = Buffer.from(tail);
-    const totalSize = headerBuf.length + stat.size + tailBuf.length;
-
-    console.log(`[webhook DEBUG] Total request size: ${totalSize} байт (${(totalSize / 1024 / 1024).toFixed(2)} MB)`);
-
-    const req = https.request({
-      hostname: 'api.telegram.org',
-      path: `/bot${TOKEN}/${tgMethod}`,
-      method: 'POST',
-      headers: {
-        'Content-Type': `multipart/form-data; boundary=${boundary}`,
-        'Content-Length': totalSize,
-      },
-    }, res => {
-      console.log(`[webhook DEBUG] Telegram ответил: HTTP ${res.statusCode}`);
-      
-      let raw = '';
-      res.on('data', c => raw += c);
-      res.on('end', () => {
-        try { 
-          const result = JSON.parse(raw);
-          console.log(`[webhook DEBUG] Telegram result: ${JSON.stringify(result).substring(0, 200)}`);
-          console.log(`[webhook DEBUG] ============================================\n`);
-          resolve(result); 
-        } catch (e) { 
-          console.error(`[webhook DEBUG] Ошибка парсинга: ${e.message}`);
-          resolve({}); 
-        }
-      });
-    });
-
-    req.on('error', (err) => {
-      console.error(`[webhook DEBUG] ❌ Ошибка HTTPS: ${err.message}`);
-      console.error(`[webhook DEBUG] ============================================\n`);
-      reject(err);
-    });
-
-    console.log(`[webhook DEBUG] Пишем header...`);
-    req.write(headerBuf);
-
-    console.log(`[webhook DEBUG] Пишем файл STREAMING...`);
-    const stream = fs.createReadStream(filePath);
-    let bytesSent = 0;
-    
-    stream.on('data', (chunk) => {
-      bytesSent += chunk.length;
-      if (bytesSent % (5 * 1024 * 1024) === 0) {  // Логируем каждые 5MB
-        console.log(`[webhook DEBUG] Отправлено ${(bytesSent / 1024 / 1024).toFixed(1)} MB...`);
-      }
-    });
-
-    stream.pipe(req, { end: false });
-
-    stream.on('end', () => {
-      console.log(`[webhook DEBUG] Файл полностью прочитан (${bytesSent} байт), пишем tail...`);
-      req.write(tailBuf);
-      req.end();
-    });
-
-    stream.on('error', (err) => {
-      console.error(`[webhook DEBUG] ❌ Ошибка чтения файла: ${err.message}`);
-      console.error(`[webhook DEBUG] ============================================\n`);
-      req.destroy();
-      reject(err);
-    });
   });
 }
 
@@ -186,7 +63,6 @@ export default async function handler(req, res) {
       let data;
       try { data = JSON.parse(msg.web_app_data.data); }
       catch { 
-        console.error('[webhook] Ошибка парсинга web_app_data');
         return res.status(200).json({ ok: true }); 
       }
 
@@ -194,37 +70,143 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true }); 
       }
 
-      console.log(`[webhook] Получена команда: fileId=${data.fileId}, format=${data.format}`);
+      const { fileId, format = 'mp4', name = 'video' } = data;
+      
+      console.log(`\n========== НАЧАЛО ОТПРАВКИ ==========`);
+      console.log(`fileId: ${fileId}`);
+      console.log(`format: ${format}`);
+      console.log(`name: ${name}`);
 
+      // ДИАГНОСТИКА: Проверяем какие файлы есть в /tmp
+      const tmpDir = '/tmp';
+      let allFiles = [];
+      try {
+        allFiles = fs.readdirSync(tmpDir);
+      } catch (e) {
+        console.error(`Ошибка чтения /tmp: ${e.message}`);
+      }
+
+      const ourFiles = allFiles.filter(f => f.startsWith(fileId));
+      console.log(`\nВсе файлы с ID ${fileId}: ${ourFiles.length > 0 ? ourFiles.join(', ') : 'НЕТУ!'}`);
+      console.log(`Всего файлов в /tmp: ${allFiles.length}`);
+
+      // Сообщаем пользователю
       await tgCall('sendMessage', {
         chat_id: chatId,
-        text: '⏳ Видео получено, отправляю...',
+        text: '⏳ Проверяю видео...',
       });
 
-      // ВАЖНО: Отправляем в фоне, но сразу возвращаем ответ Telegram
-      setImmediate(async () => {
-        try {
-          const result = await sendVideoToUser(chatId, data.fileId, data.format || 'mp4', data.name || 'video.mp4');
-          
-          if (!result.ok) {
-            const desc = result.description || 'неизвестная ошибка';
-            console.error(`[webhook] Telegram ошибка: ${desc}`);
-            
-            await tgCall('sendMessage', {
-              chat_id: chatId,
-              text: `❌ Ошибка Telegram:\n\n${desc}`,
-            });
-          } else {
-            console.log(`[webhook] ✓ Видео успешно отправлено!`);
-          }
-        } catch (e) {
-          console.error(`[webhook] ❌ ОШИБКА: ${e.message}`);
-          await tgCall('sendMessage', {
-            chat_id: chatId,
-            text: `❌ Ошибка:\n\n${e.message}`,
-          });
+      const ext = format === 'gif' ? 'gif' : format === 'webm' ? 'webm' : format === 'mov' ? 'mov' : 'mp4';
+      const filePath = path.join(tmpDir, `${fileId}.${ext}`);
+
+      console.log(`\nЩу файл: ${filePath}`);
+
+      // ПРОВЕРЯЕМ СУЩЕСТВОВАНИЕ ФАЙЛА
+      if (!fs.existsSync(filePath)) {
+        console.error(`ОШИБКА: Файл не найден!`);
+        console.log(`Найденные файлы: ${ourFiles.join(', ') || 'НИЧЕГО!'}`);
+        
+        let errorMsg = `❌ ОШИБКА: Файл не найден в /tmp!\n\n`;
+        errorMsg += `Ожидаемый файл: ${filePath}\n\n`;
+        if (ourFiles.length > 0) {
+          errorMsg += `Найденные файлы:\n${ourFiles.map(f => `• ${f}`).join('\n')}\n\n`;
+        } else {
+          errorMsg += `В /tmp нет файлов с ID ${fileId}\n\n`;
         }
+        errorMsg += `Возможная причина:\n`;
+        errorMsg += `• Файл не был загружен на сервер\n`;
+        errorMsg += `• Vercel удалил /tmp после завершения\n`;
+        errorMsg += `• Ошибка при загрузке`;
+
+        await tgCall('sendMessage', {
+          chat_id: chatId,
+          text: errorMsg,
+        });
+
+        console.log(`========== КОНЕЦ (ОШИБКА) ==========\n`);
+        return res.status(200).json({ ok: true });
+      }
+
+      const stat = fs.statSync(filePath);
+      console.log(`✓ Файл найден! Размер: ${stat.size} байт (${(stat.size / 1024 / 1024).toFixed(2)} MB)`);
+
+      // ОТПРАВЛЯЕМ ФАЙЛ ПРЯМЫМ СПОСОБОМ (без multipart)
+      // Используем fs.readFile чтобы прочитать весь файл в буфер
+      const fileBuffer = fs.readFileSync(filePath);
+      console.log(`✓ Файл прочитан в памяти`);
+
+      // СТРОИМ ПРОСТОЙ MULTIPART
+      const boundary = '----FormBoundary' + Date.now();
+      const filename = name.replace(/[^\w\-\.]/g, '_');
+      
+      const beforeFile =
+        `--${boundary}\r\n` +
+        `Content-Disposition: form-data; name="chat_id"\r\n\r\n` +
+        `${chatId}\r\n` +
+        `--${boundary}\r\n` +
+        `Content-Disposition: form-data; name="document"; filename="${filename}"\r\n` +
+        `Content-Type: application/octet-stream\r\n\r\n`;
+
+      const afterFile = `\r\n--${boundary}--\r\n`;
+
+      const body = Buffer.concat([
+        Buffer.from(beforeFile),
+        fileBuffer,
+        Buffer.from(afterFile),
+      ]);
+
+      console.log(`Размер запроса: ${body.length} байт (${(body.length / 1024 / 1024).toFixed(2)} MB)`);
+
+      // ОТПРАВЛЯЕМ В TELEGRAM
+      const tgReq = https.request({
+        hostname: 'api.telegram.org',
+        path: `/bot${TOKEN}/sendDocument`,
+        method: 'POST',
+        headers: {
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+          'Content-Length': body.length,
+        },
+      }, tgRes => {
+        console.log(`Ответ Telegram: HTTP ${tgRes.statusCode}`);
+        
+        let rawData = '';
+        tgRes.on('data', chunk => rawData += chunk);
+        tgRes.on('end', async () => {
+          try {
+            const result = JSON.parse(rawData);
+            console.log(`Telegram OK: ${result.ok}`);
+            
+            if (result.ok) {
+              console.log(`✓ УСПЕХ!`);
+              await tgCall('sendMessage', {
+                chat_id: chatId,
+                text: '✅ Видео отправлено!',
+              });
+            } else {
+              console.error(`✗ Ошибка Telegram: ${result.description}`);
+              await tgCall('sendMessage', {
+                chat_id: chatId,
+                text: `❌ Ошибка Telegram:\n${result.description}`,
+              });
+            }
+          } catch (e) {
+            console.error(`Ошибка парсинга: ${e.message}`);
+          }
+          console.log(`========== КОНЕЦ ==========\n`);
+        });
       });
+
+      tgReq.on('error', async (err) => {
+        console.error(`ОШИБКА HTTPS: ${err.message}`);
+        await tgCall('sendMessage', {
+          chat_id: chatId,
+          text: `❌ Ошибка сети:\n${err.message}`,
+        });
+        console.log(`========== КОНЕЦ (ОШИБКА) ==========\n`);
+      });
+
+      tgReq.write(body);
+      tgReq.end();
 
       return res.status(200).json({ ok: true });
     }
