@@ -752,14 +752,28 @@ G('btnSendTg').onclick = async () => {
     });
 
     if (tgApp) {
-      // Запущено внутри Telegram — отправляем данные боту и закрываем
-      tgApp.sendData(JSON.stringify({
+      // Запущено внутри Telegram Mini App
+      // Подготавливаем данные для отправки боту
+      const data = {
         action: 'send_video',
         fileId: resp.fileId,
         format: format,
         name: fname
-      }));
-      // sendData закрывает Mini App автоматически
+      };
+      
+      console.log('[app] Отправляем в Telegram:', data);
+      
+      // ⚠️ ВАЖНО: sendData закроет приложение автоматически!
+      // Поэтому мы сначала показываем статус пользователю, потом отправляем
+      G('ptitle').textContent = '📤 Отправляем в Telegram...';
+      G('psub').textContent = 'Приложение закроется автоматически';
+      
+      // Даём приложению время показать сообщение перед закрытием
+      setTimeout(() => {
+        tgApp.sendData(JSON.stringify(data));
+        // После sendData приложение будет закрыто Telegram
+      }, 300);
+      
     } else {
       // Запущено в браузере — просто скачиваем
       sp.style.display = 'none';

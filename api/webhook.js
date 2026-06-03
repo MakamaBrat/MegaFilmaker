@@ -37,12 +37,19 @@ function tgCall(method, body) {
 // Скачать файл из нашего /tmp через /api/download и отправить боту как видео
 function sendVideoToUser(chatId, fileId, fmt, name) {
   return new Promise((resolve, reject) => {
-    // Строим URL нашего сервера
-    const host = process.env.APP_URL || process.env.VERCEL_URL;
+    const host = process.env.VERCEL_URL || process.env.APP_URL;
+    
+    if (!host) {
+      return reject(new Error('VERCEL_URL не установлена в переменных окружения'));
+    }
+
     const dlUrl = `https://${host}/api/download?outId=${fileId}&format=${fmt}&name=${encodeURIComponent(name)}`;
+    
+    console.log('[webhook] Скачиваем видео с:', dlUrl);
 
     https.get(dlUrl, dlRes => {
       if (dlRes.statusCode !== 200) {
+        console.error(`[webhook] Ошибка скачивания: HTTP ${dlRes.statusCode}`);
         return reject(new Error(`Ошибка скачивания файла: HTTP ${dlRes.statusCode}`));
       }
 
@@ -50,9 +57,14 @@ function sendVideoToUser(chatId, fileId, fmt, name) {
       dlRes.on('data', c => chunks.push(c));
       dlRes.on('end', () => {
         const buf = Buffer.concat(chunks);
-        if (buf.length === 0) return reject(new Error('Файл пустой'));
+        
+        if (buf.length === 0) {
+          console.error('[webhook] Файл пустой');
+          return reject(new Error('Файл пустой'));
+        }
 
-        // Multipart upload в Telegram
+        console.log(`[webhook] Получен файл ${buf.length} байт, отправляем в Telegram...`);
+
         const boundary = 'TGBound' + Date.now();
         const filename  = name || `video.${fmt}`;
         const mime      = fmt === 'gif' ? 'image/gif' : fmt === 'webm' ? 'video/webm' : 'video/mp4';
@@ -83,7 +95,11 @@ function sendVideoToUser(chatId, fileId, fmt, name) {
           let raw = '';
           r.on('data', c => raw += c);
           r.on('end', () => {
-            try { resolve(JSON.parse(raw)); } catch { resolve({}); }
+            try { 
+              const result = JSON.parse(raw);
+              console.log('[webhook] Telegram ответ:', result.ok ? 'успех' : `ошибка: ${result.description}`);
+              resolve(result); 
+            } catch { resolve({}); }
           });
         });
         req.on('error', reject);
@@ -104,17 +120,20 @@ export default async function handler(req, res) {
     if (!msg) return res.status(200).json({ ok: true });
 
     const chatId = msg.chat.id;
+    console.log(`[webhook] Новое сообщение от ${chatId}`);
 
     // ── /start ──
     if (msg.text === '/start') {
-      const host = process.env.APP_URL || process.env.VERCEL_URL;
+      const host = process.env.VERCEL_URL || process.env.APP_URL;
+      const appUrl = host ? `https://${host}` : 'https://your-app-url.vercel.app';
+      
       await tgCall('sendMessage', {
         chat_id: chatId,
         text: '✂️ Привет! Нажми кнопку ниже, чтобы открыть редактор видео.\n\nОбрезай, поворачивай, меняй скорость — и получай готовое видео прямо в чат!',
         reply_markup: {
           inline_keyboard: [[{
             text: '✂️ Открыть ВидеоРез',
-            web_app: { url: `https://${host}` },
+            web_app: { url: appUrl },
           }]],
         },
       });
@@ -125,9 +144,17 @@ export default async function handler(req, res) {
     if (msg.web_app_data?.data) {
       let data;
       try { data = JSON.parse(msg.web_app_data.data); }
-      catch { return res.status(200).json({ ok: true }); }
+      catch { 
+        console.error('[webhook] Ошибка парсинга web_app_data');
+        return res.status(200).json({ ok: true }); 
+      }
 
-      if (data.action !== 'send_video') return res.status(200).json({ ok: true });
+      if (data.action !== 'send_video') {
+        console.log('[webhook] Неизвестное действие:', data.action);
+        return res.status(200).json({ ok: true }); 
+      }
+
+      console.log(`[webhook] Получена команда отправить видео: fileId=${data.fileId}, format=${data.format}`);
 
       // Сообщаем пользователю что получили
       await tgCall('sendMessage', {
@@ -135,27 +162,37 @@ export default async function handler(req, res) {
         text: '⏳ Видео получено, отправляю...',
       });
 
-      // Скачиваем и отправляем — ПЕРЕД тем как ответить Telegram
-      try {
-        const result = await sendVideoToUser(chatId, data.fileId, data.format || 'mp4', data.name || 'video.mp4');
-        if (!result.ok) {
+      // Скачиваем и отправляем в фоне
+      setImmediate(async () => {
+        try {
+          console.log('[webhook] Начинаем отправку видео в Telegram...');
+          const result = await sendVideoToUser(chatId, data.fileId, data.format || 'mp4', data.name || 'video.mp4');
+          
+          if (!result.ok) {
+            const desc = result.description || 'неизвестная ошибка';
+            console.error(`[webhook] Telegram вернул ошибку: ${desc}`);
+            
+            await tgCall('sendMessage', {
+              chat_id: chatId,
+              text: `❌ Не удалось отправить: ${desc}\n\nВозможно файл слишком большой (лимит Telegram — 50 МБ).`,
+            });
+          } else {
+            console.log(`[webhook] Видео успешно отправлено пользователю ${chatId}`);
+          }
+        } catch (e) {
+          console.error(`[webhook] Ошибка при отправке видео: ${e.message}`);
           await tgCall('sendMessage', {
             chat_id: chatId,
-            text: `❌ Не удалось отправить: ${result.description || 'неизвестная ошибка'}\n\nВозможно файл слишком большой (лимит Telegram — 50 МБ).`,
+            text: `❌ Ошибка при отправке видео:\n\n${e.message}`,
           });
         }
-      } catch (e) {
-        await tgCall('sendMessage', {
-          chat_id: chatId,
-          text: `❌ Ошибка: ${e.message}`,
-        });
-      }
+      });
 
       return res.status(200).json({ ok: true });
     }
 
   } catch (e) {
-    console.error('Webhook error:', e.message);
+    console.error('[webhook] Критическая ошибка:', e.message);
   }
 
   return res.status(200).json({ ok: true });
