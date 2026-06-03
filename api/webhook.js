@@ -44,7 +44,7 @@ export default async function handler(req, res) {
 
     if (msg.text === '/start') {
       const host = process.env.VERCEL_URL || process.env.APP_URL;
-      const appUrl = host ? `https://${host}` : 'https://your-app-url.vercel.app';
+      const appUrl = host ? `https://${host}` : 'https://mega-filmaker.vercel.app';
       
       await tgCall('sendMessage', {
         chat_id: chatId,
