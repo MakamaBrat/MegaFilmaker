@@ -2,14 +2,18 @@
   "version": 2,
   "builds": [
     {
-      "src": "api_handler.py",
+      "src": "api/handler.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
-      "src": "/(.*)",
-      "dest": "api_handler.py"
+      "src": "/api/.*",
+      "dest": "api/handler.py"
+    },
+    {
+      "src": "/.*",
+      "dest": "api/handler.py"
     }
   ],
   "env": {
