@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  video-merger-bot:
+    build: .
+    container_name: video-merger-bot
+    ports:
+      - "8000:8000"
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      WEBHOOK_URL: ${WEBHOOK_URL:-http://localhost:8000}
+      PORT: 8000
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - ./api_handler_full.py:/app/api_handler_full.py
+      - ./video_processor.py:/app/video_processor.py
+      - /tmp/video_processing:/tmp/video_processing
+      - /tmp/video_output:/tmp/video_output
+    networks:
+      - video-merger
+    restart: unless-stopped
+
+networks:
+  video-merger:
+    driver: bridge
+
+# Запуск:
+# 1. Скопируй .env.example в .env
+# 2. Заполни TELEGRAM_BOT_TOKEN в .env
+# 3. Запусти: docker-compose up --build
+# 4. Проверь: http://localhost:8000
