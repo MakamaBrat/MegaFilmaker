@@ -52,57 +52,22 @@ body {
 #fileInput { display:none; }
 
 /* EDITOR */
-#stateEditor { display:none; flex:1; flex-direction:column; }
+#stateEditor { display:none; flex:1; flex-direction:column; min-height:0; overflow:hidden; }
 
-/* TOOLBAR */
-.toolbar { background:#f8f8f8; border-bottom:1px solid #e0e0e0; display:flex; align-items:center; padding:0 8px; height:46px; overflow-x:auto; scrollbar-width:none; flex-shrink:0; gap:2px; }
-.toolbar::-webkit-scrollbar { display:none; }
-.tool-tab { display:flex; align-items:center; gap:5px; padding:6px 10px; border-radius:6px; border:none; background:transparent; color:var(--text); font-size:12px; font-family:inherit; cursor:pointer; white-space:nowrap; transition:all .15s; }
-.tool-tab:hover { background:rgba(0,0,0,.05); }
-.tool-tab.active { background:rgba(41,98,255,.1); color:var(--accent); }
-.tsep { width:1px; height:22px; background:var(--border); margin:0 4px; }
-.tr { margin-left:auto; display:flex; gap:5px; }
-.tbtn { background:transparent; border:1px solid var(--border); color:var(--muted); border-radius:5px; padding:4px 9px; font-size:12px; cursor:pointer; font-family:inherit; }
-.tbtn:hover { border-color:#999; color:var(--text); }
-
-/* VIDEO */
-.ebody { display:flex; flex:1; min-height:0; }
-.vwrap { flex:1; background:#1a1a1a; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; min-height:200px; }
+.editor-video { flex:1; background:#1a1a1a; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; min-height:120px; }
 #videoEl { max-width:100%; max-height:100%; display:block; }
-.play-ov { position:absolute; width:52px; height:52px; background:rgba(255,255,255,.15); backdrop-filter:blur(4px); border-radius:50%; border:none; color:#fff; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .2s; }
-.vwrap:hover .play-ov { opacity:1; }
+.play-overlay { position:absolute; width:50px; height:50px; background:rgba(255,255,255,.15); backdrop-filter:blur(4px); border-radius:50%; border:none; color:#fff; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .2s; z-index:2; }
+.editor-video:hover .play-overlay { opacity:1; }
 
-/* SIDE */
-.side { width:210px; flex-shrink:0; border-left:1px solid var(--border); background:#fff; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:14px; }
-.stitle { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:8px; }
-.tfgrid { display:grid; grid-template-columns:1fr 1fr; gap:5px; }
-.tfbtn { background:#f9fafb; border:1px solid var(--border); border-radius:6px; padding:9px 5px; font-family:inherit; font-size:11px; color:var(--text); cursor:pointer; text-align:center; display:flex; flex-direction:column; align-items:center; gap:3px; transition:all .15s; }
-.tfbtn:hover { border-color:var(--accent); }
-.tfbtn.on { border-color:var(--accent); color:var(--accent); background:rgba(41,98,255,.06); }
-.tfbtn .ic { font-size:18px; line-height:1; }
-.tfbtn .lb { font-size:10px; color:var(--muted); }
-.tfbtn.on .lb { color:var(--accent); }
-.spgrid { display:flex; flex-wrap:wrap; gap:4px; }
-.spbtn { flex:1; min-width:38px; background:#f9fafb; border:1px solid var(--border); border-radius:5px; padding:7px 3px; font-size:12px; font-weight:600; text-align:center; cursor:pointer; font-family:inherit; transition:all .15s; }
-.spbtn:hover { border-color:#f59e0b; }
-.spbtn.on { background:rgba(245,158,11,.1); border-color:#f59e0b; color:#b45309; }
-.fmgrid { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:8px; }
-.fmbtn { flex:1; min-width:36px; background:#f9fafb; border:1px solid var(--border); border-radius:5px; padding:6px 3px; font-size:12px; font-weight:700; text-align:center; cursor:pointer; font-family:inherit; transition:all .15s; }
-.fmbtn:hover, .fmbtn.on { background:rgba(41,98,255,.07); border-color:var(--accent); color:var(--accent); }
-.qlrow { display:flex; gap:4px; }
-.qlbtn { flex:1; background:#f9fafb; border:1px solid var(--border); border-radius:5px; padding:5px 3px; font-size:11px; text-align:center; cursor:pointer; font-family:inherit; transition:all .15s; }
-.qlbtn.on { background:rgba(34,197,94,.08); border-color:var(--success); color:#15803d; }
+.editor-bar { background:#f9fafb; border-bottom:1px solid var(--border); padding:10px 14px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
+.file-info { font-size:12px; }
+.fname { font-weight:600; color:var(--text); display:block; }
+.fmeta { color:var(--muted); font-size:11px; display:block; margin-top:2px; }
+.change-btn { background:transparent; border:1px solid var(--border); border-radius:5px; padding:6px 12px; font-size:11px; cursor:pointer; font-family:inherit; color:var(--muted); }
+.change-btn:hover { border-color:var(--accent); color:var(--text); }
 
-/* BOTTOM NAV */
-.bnav { background:#fff; border-top:1px solid var(--border); padding:9px 12px; flex-shrink:0; }
-.fbar { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
-.fname { font-size:12px; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.fmeta { font-size:11px; color:var(--muted); white-space:nowrap; }
-.chbtn { background:transparent; border:1px solid var(--border); border-radius:4px; padding:3px 7px; font-size:11px; cursor:pointer; color:var(--muted); }
-.chbtn:hover { border-color:#999; color:var(--text); }
-
-/* STORYBOARD */
-.sb { position:relative; height:54px; background:#2a2a2a; border-radius:4px; overflow:hidden; cursor:crosshair; margin-bottom:8px; display:flex; touch-action:none; user-select:none; -webkit-user-select:none; }
+.timeline-section { background:#fff; border-bottom:1px solid var(--border); padding:10px; flex-shrink:0; }
+.sb { position:relative; height:50px; background:#2a2a2a; border-radius:6px; overflow:hidden; cursor:crosshair; margin-bottom:8px; display:flex; touch-action:none; user-select:none; }
 .sbframes { display:flex; height:100%; flex:1; overflow:hidden; }
 .sbframe { flex-shrink:0; height:100%; overflow:hidden; background:#333; border-right:1px solid rgba(0,0,0,.3); }
 .sbframe img { width:100%; height:100%; object-fit:cover; display:block; }
@@ -111,28 +76,57 @@ body {
 .sbov { position:absolute; inset:0; pointer-events:none; }
 .sbmask { position:absolute; top:0; bottom:0; background:rgba(0,0,0,.55); z-index:2; }
 .sbsel { position:absolute; top:0; bottom:0; border:2px solid #2962ff; z-index:3; pointer-events:none; }
-.sbh { position:absolute; top:0; bottom:0; width:44px; cursor:ew-resize; z-index:5; pointer-events:all; display:flex; align-items:center; justify-content:center; }
-.sbhbar { width:5px; height:60%; background:#2962ff; border-radius:3px; box-shadow:0 0 0 1px rgba(255,255,255,.3); }
+.sbh { position:absolute; top:0; bottom:0; width:40px; cursor:ew-resize; z-index:5; pointer-events:all; display:flex; align-items:center; justify-content:center; }
+.sbhbar { width:3px; height:50%; background:#2962ff; border-radius:3px; }
 .sbhl { left:0; transform:translateX(-50%); }
 .sbhr { right:0; transform:translateX(50%); }
 .sbph { position:absolute; top:0; bottom:0; width:2px; background:#fff; z-index:4; pointer-events:none; }
-.sbhint { position:absolute; top:-24px; background:rgba(0,0,0,.7); color:#fff; border-radius:4px; padding:2px 6px; font-size:11px; transform:translateX(-50%); pointer-events:none; white-space:nowrap; display:none; z-index:10; }
+.sbhint { position:absolute; top:-22px; background:rgba(0,0,0,.7); color:#fff; border-radius:4px; padding:2px 5px; font-size:10px; transform:translateX(-50%); white-space:nowrap; display:none; z-index:10; }
 
-/* CONTROLS */
-.crow { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
-.pbtn { width:34px; height:34px; background:#f3f4f6; border:1px solid var(--border); border-radius:50%; cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .15s; }
+.playback-controls { display:flex; align-items:center; gap:8px; }
+.pbtn { width:32px; height:32px; background:#f3f4f6; border:1px solid var(--border); border-radius:50%; cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .pbtn:hover { background:var(--border); }
-.tstepper { display:flex; align-items:center; gap:1px; background:#f9fafb; border:1px solid var(--border); border-radius:5px; padding:4px 7px; font-size:14px; font-variant-numeric:tabular-nums; }
-.tinp { background:transparent; border:none; outline:none; width:22px; text-align:center; font-family:inherit; font-size:14px; color:var(--text); }
-.tsep2 { color:#aaa; font-size:12px; }
-.dash { color:var(--muted); margin:0 2px; }
-.invbtn { background:#f9fafb; border:1px solid var(--border); border-radius:5px; padding:5px 9px; font-size:12px; cursor:pointer; font-family:inherit; color:var(--muted); transition:all .15s; }
-.invbtn:hover { border-color:#999; color:var(--text); }
-.invbtn.on { background:rgba(245,158,11,.1); border-color:#f59e0b; color:#b45309; }
-.durb { background:var(--accent); color:#fff; border-radius:12px; padding:3px 10px; font-size:12px; font-weight:500; margin-left:auto; }
-.savebtn { background:var(--accent); color:#fff; border:none; border-radius:5px; padding:9px 20px; font-size:14px; font-weight:500; font-family:inherit; cursor:pointer; transition:background .2s; white-space:nowrap; }
-.savebtn:hover { background:var(--accent-h); }
-.savebtn:disabled { opacity:.55; cursor:not-allowed; }
+.time-inputs { display:flex; align-items:center; gap:2px; font-size:12px; flex:1; font-family:'Courier New',monospace; }
+.tinp { background:transparent; border:none; outline:none; width:16px; text-align:center; font-size:12px; color:var(--text); }
+.time-sep { color:var(--muted); margin:0 2px; }
+.duration-badge { background:var(--accent); color:#fff; border-radius:6px; padding:3px 8px; font-size:11px; font-weight:600; white-space:nowrap; flex-shrink:0; }
+
+/* ACCORDION TOOLS */
+.tools-accordion { flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:6px; min-height:0; }
+.accordion-item { background:#f9fafb; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+.accordion-btn { width:100%; background:transparent; border:none; padding:12px 14px; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; color:var(--text); font-family:inherit; text-align:left; }
+.accordion-btn:hover { background:rgba(41,98,255,.05); }
+.accordion-btn.active { color:var(--accent); }
+.accordion-content { max-height:0; overflow:hidden; transition:max-height .2s; }
+.accordion-content.show { max-height:500px; }
+.accordion-content { padding:12px 14px; }
+.tool-desc { font-size:11px; color:var(--muted); margin-bottom:10px; line-height:1.4; }
+.label-small { font-size:10px; font-weight:600; text-transform:uppercase; color:var(--muted); margin-bottom:6px; letter-spacing:.5px; }
+
+.button-group-2col { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.button-group-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+.button-group-5 { display:grid; grid-template-columns:repeat(5,1fr); gap:4px; }
+.icon-btn, .speed-btn, .format-btn, .quality-btn, .accent-btn, .outline-btn { background:#fff; border:1px solid var(--border); border-radius:6px; padding:10px 6px; font-size:11px; cursor:pointer; font-family:inherit; font-weight:500; transition:all .2s; }
+.icon-btn:hover, .speed-btn:hover, .format-btn:hover, .quality-btn:hover { border-color:var(--accent); }
+.icon-btn.on, .speed-btn.on, .format-btn.on, .quality-btn.on { background:rgba(41,98,255,.1); border-color:var(--accent); color:var(--accent); }
+.accent-btn { background:var(--accent); color:#fff; border-color:var(--accent); }
+.accent-btn:hover { background:var(--accent-h); }
+.outline-btn { background:transparent; border:1px solid var(--border); color:var(--muted); }
+.outline-btn:hover { border-color:var(--text); color:var(--text); }
+
+/* ACTION BUTTONS */
+.editor-actions { display:grid; grid-template-columns:2fr 1fr; gap:8px; padding:10px; flex-shrink:0; background:#f9fafb; border-top:1px solid var(--border); }
+.action-btn { border:none; border-radius:6px; padding:12px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }
+.action-btn.primary { background:var(--accent); color:#fff; }
+.action-btn.primary:hover { background:var(--accent-h); }
+.action-btn.secondary { background:transparent; border:1px solid var(--border); color:var(--muted); }
+.action-btn.secondary:hover { border-color:var(--text); color:var(--text); }
+
+@media (max-width:600px) {
+  .editor-bar { flex-direction:column; align-items:flex-start; gap:8px; }
+  .tools-accordion { max-height:180px; }
+  .editor-actions { grid-template-columns:1fr; }
+}
 
 /* PROGRESS OVERLAY */
 #stateProgress { display:none; flex-direction:column; align-items:center; justify-content:center; flex:1; padding:40px 20px; }
@@ -165,74 +159,19 @@ body {
   .side { display:none; }
   .durb { display:none; }
   .app-title h1 { font-size:22px; }
-  .vwrap { max-height:42vh; }
 }
-
-/* HOME SCREEN */
-#stateHome { display:flex; flex:1; flex-direction:column; align-items:center; justify-content:center; padding:20px 16px; }
-.home-title { text-align:center; margin-bottom:24px; }
-.home-title h1 { font-size:24px; font-weight:700; margin-bottom:4px; }
-.home-title p { font-size:13px; color:var(--muted); }
-.mode-cards { display:flex; gap:12px; width:100%; max-width:420px; }
-.mode-card { flex:1; background:#fafbfc; border:2px solid var(--border); border-radius:14px; padding:24px 16px; text-align:center; cursor:pointer; transition:all .2s; }
-.mode-card:hover { border-color:var(--accent); background:rgba(41,98,255,.03); }
-.mode-card .mc-icon { font-size:36px; margin-bottom:8px; }
-.mode-card .mc-name { font-size:15px; font-weight:600; margin-bottom:4px; }
-.mode-card .mc-desc { font-size:11px; color:var(--muted); line-height:1.5; }
-.back-btn { background:none; border:none; color:#fff; font-size:18px; cursor:pointer; padding:4px; margin-right:2px; display:none; }
-
-/* MERGE SCREEN */
-#stateMerge { display:none; flex:1; flex-direction:column; overflow-y:auto; padding:16px; max-width:540px; margin:0 auto; width:100%; }
-.merge-title { font-size:18px; font-weight:700; margin-bottom:14px; text-align:center; }
-.merge-slots { display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
-.merge-slot { border:2px dashed var(--border); border-radius:12px; padding:18px; text-align:center; cursor:pointer; transition:all .2s; position:relative; }
-.merge-slot:hover { border-color:var(--accent); }
-.merge-slot.has-file { border-style:solid; border-color:#22c55e; background:rgba(34,197,94,.04); }
-.merge-slot .ms-num { font-size:22px; margin-bottom:4px; }
-.merge-slot .ms-label { font-size:13px; font-weight:500; }
-.merge-slot .ms-info { font-size:11px; color:var(--muted); margin-top:4px; }
-.merge-slot .ms-remove { position:absolute; top:8px; right:8px; background:#ef4444; color:#fff; border:none; border-radius:50%; width:22px; height:22px; font-size:12px; cursor:pointer; display:none; align-items:center; justify-content:center; }
-.merge-slot.has-file .ms-remove { display:flex; }
-.merge-swap { align-self:center; background:#f3f4f6; border:1px solid var(--border); border-radius:6px; padding:6px 16px; font-size:12px; font-weight:500; cursor:pointer; font-family:inherit; margin:-4px 0; z-index:1; }
-.merge-swap:hover { border-color:var(--accent); }
-.merge-fmt { display:flex; gap:6px; margin-bottom:14px; }
-.merge-fmt .mfbtn { flex:1; background:#f9fafb; border:1px solid var(--border); border-radius:5px; padding:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
-.merge-fmt .mfbtn.on { background:rgba(41,98,255,.07); border-color:var(--accent); color:var(--accent); }
-.merge-go { width:100%; background:var(--accent); color:#fff; border:none; border-radius:8px; padding:12px; font-size:15px; font-weight:600; font-family:inherit; cursor:pointer; }
-.merge-go:disabled { opacity:.5; cursor:not-allowed; }
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
 <header class="header">
-  <button class="back-btn" id="btnBack">←</button>
-  <a href="#" class="logo" id="logoHome"><div class="logo-ic">✂️</div>ВидеоРез</a>
+  <a href="#" class="logo"><div class="logo-ic">✂️</div>ВидеоРез</a>
   <span class="tg-badge">Telegram Mini App</span>
 </header>
 
-<!-- HOME -->
-<div id="stateHome">
-  <div class="home-title">
-    <h1>ВидеоРез</h1>
-    <p>Выберите что хотите сделать</p>
-  </div>
-  <div class="mode-cards">
-    <div class="mode-card" id="modeCut">
-      <div class="mc-icon">✂️</div>
-      <div class="mc-name">Обрезать</div>
-      <div class="mc-desc">Вырезать фрагмент, повернуть, изменить скорость</div>
-    </div>
-    <div class="mode-card" id="modeMerge">
-      <div class="mc-icon">🔗</div>
-      <div class="mc-name">Склеить</div>
-      <div class="mc-desc">Соединить два видео в одно</div>
-    </div>
-  </div>
-</div>
-
 <!-- UPLOAD -->
-<div id="stateUpload" style="display:none">
+<div id="stateUpload">
   <div class="app-title">
     <h1>Обрезать видео</h1>
     <h2>Обрезать или вырезать фрагмент из видео любого формата</h2>
@@ -253,75 +192,23 @@ body {
 
 <!-- EDITOR -->
 <div id="stateEditor">
-  <div class="toolbar">
-    <button class="tool-tab active" data-tool="cut">✂️ Обрезка</button>
-    <button class="tool-tab" data-tool="rotate">🔄 Повернуть</button>
-    <div class="tsep"></div>
-    <button class="tool-tab" data-tool="speed">⚡ Скорость</button>
-    <button class="tool-tab" data-tool="format">📦 Формат</button>
-    <div class="tr">
-      <button class="tbtn" id="btnReset">Сбросить</button>
-    </div>
+  <!-- VIDEO -->
+  <div class="editor-video">
+    <video id="videoEl" preload="metadata" playsinline></video>
+    <button class="play-overlay" id="btnPlayOv">▶</button>
   </div>
 
-  <div class="ebody">
-    <div class="vwrap">
-      <video id="videoEl" preload="metadata" playsinline></video>
-      <button class="play-ov" id="btnPlayOv">▶</button>
-    </div>
-    <div class="side">
-      <!-- cut -->
-      <div id="panelCut">
-        <div class="stitle">✂️ Обрезка</div>
-        <p style="font-size:11px;color:#6b7280;line-height:1.6">Перетащите маркеры на таймлайне чтобы выбрать нужный фрагмент.</p>
-      </div>
-      <!-- rotate -->
-      <div id="panelRotate" style="display:none">
-        <div class="stitle">🔄 Поворот и отражение</div>
-        <div class="tfgrid">
-          <button class="tfbtn" id="btnR90"><span class="ic">↻</span><span class="lb">90°</span></button>
-          <button class="tfbtn" id="btnR180"><span class="ic">↺</span><span class="lb">180°</span></button>
-          <button class="tfbtn" id="btnFlipH"><span class="ic">⇔</span><span class="lb">Горизонталь</span></button>
-          <button class="tfbtn" id="btnFlipV"><span class="ic">⇕</span><span class="lb">Вертикаль</span></button>
-        </div>
-      </div>
-      <!-- speed -->
-      <div id="panelSpeed" style="display:none">
-        <div class="stitle">⚡ Скорость</div>
-        <div class="spgrid">
-          <button class="spbtn" data-sp="0.5">0.5×</button>
-          <button class="spbtn" data-sp="0.75">0.75×</button>
-          <button class="spbtn on" data-sp="1">1×</button>
-          <button class="spbtn" data-sp="1.5">1.5×</button>
-          <button class="spbtn" data-sp="2">2×</button>
-        </div>
-      </div>
-      <!-- format -->
-      <div id="panelFormat" style="display:none">
-        <div class="stitle">📦 Формат</div>
-        <div class="fmgrid">
-          <button class="fmbtn on" data-fmt="mp4">MP4</button>
-          <button class="fmbtn" data-fmt="webm">WEBM</button>
-          <button class="fmbtn" data-fmt="mov">MOV</button>
-          <button class="fmbtn" data-fmt="gif">GIF</button>
-        </div>
-        <div class="stitle" style="margin-top:10px">🎨 Качество</div>
-        <div class="qlrow">
-          <button class="qlbtn" data-q="low">Низкое</button>
-          <button class="qlbtn on" data-q="medium">Среднее</button>
-          <button class="qlbtn" data-q="high">Высокое</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="bnav">
-    <div class="fbar">
+  <!-- FILE INFO + CHANGE -->
+  <div class="editor-bar">
+    <div class="file-info">
       <span class="fname" id="infoName">—</span>
       <span class="fmeta" id="infoMeta">—</span>
-      <button class="chbtn" id="btnChange">Сменить</button>
     </div>
-    <!-- Storyboard -->
+    <button class="change-btn" id="btnChange">Сменить видео</button>
+  </div>
+
+  <!-- TIMELINE -->
+  <div class="timeline-section">
     <div class="sb" id="sb">
       <div class="sbframes" id="sbFrames"></div>
       <div class="sbov">
@@ -334,30 +221,83 @@ body {
         <div class="sbhint" id="sbHint"></div>
       </div>
     </div>
-    <!-- Controls row -->
-    <div class="crow">
+    
+    <!-- PLAYBACK CONTROLS -->
+    <div class="playback-controls">
       <button class="pbtn" id="btnPlay">▶</button>
-      <div class="tstepper">
-        <input class="tinp" id="m1" value="00" maxlength="2">
-        <span class="tsep2">:</span>
-        <input class="tinp" id="s1" value="00" maxlength="2">
-        <span class="tsep2">.</span>
-        <input class="tinp" id="f1" value="0" maxlength="1" style="width:14px">
+      <div class="time-inputs">
+        <input class="tinp" id="m1" value="00" maxlength="2">:<input class="tinp" id="s1" value="00" maxlength="2">.<input class="tinp" id="f1" value="0" maxlength="1" style="width:10px">
+        <span class="time-sep">—</span>
+        <input class="tinp" id="m2" value="00" maxlength="2">:<input class="tinp" id="s2" value="00" maxlength="2">.<input class="tinp" id="f2" value="0" maxlength="1" style="width:10px">
       </div>
-      <span class="dash">—</span>
-      <div class="tstepper">
-        <input class="tinp" id="m2" value="00" maxlength="2">
-        <span class="tsep2">:</span>
-        <input class="tinp" id="s2" value="00" maxlength="2">
-        <span class="tsep2">.</span>
-        <input class="tinp" id="f2" value="0" maxlength="1" style="width:14px">
-      </div>
-      <button class="invbtn" id="btnInvert">⇄ Вырезать</button>
-      <span class="durb" id="durb">0:00</span>
-      <div style="margin-left:auto">
-        <button class="savebtn" id="btnSave">Сохранить</button>
+      <span class="duration-badge" id="durb">0:00</span>
+    </div>
+  </div>
+
+  <!-- TOOLS ACCORDION -->
+  <div class="tools-accordion">
+    <!-- CUT -->
+    <div class="accordion-item">
+      <button class="accordion-btn active" data-tool="cut">✂️ Обрезка</button>
+      <div class="accordion-content show">
+        <div class="tool-desc">Перетащите маркеры на таймлайне</div>
+        <div class="button-group-2col">
+          <button class="accent-btn" id="btnInvert">⇄ Вырезать</button>
+          <button class="outline-btn" id="btnReset">Сбросить</button>
+        </div>
       </div>
     </div>
+
+    <!-- ROTATE -->
+    <div class="accordion-item">
+      <button class="accordion-btn" data-tool="rotate">🔄 Поворот</button>
+      <div class="accordion-content">
+        <div class="button-group-2col">
+          <button class="icon-btn" id="btnR90"><span>↻ 90°</span></button>
+          <button class="icon-btn" id="btnR180"><span>↺ 180°</span></button>
+          <button class="icon-btn" id="btnFlipH"><span>⇔ Гор</span></button>
+          <button class="icon-btn" id="btnFlipV"><span>⇕ Верт</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SPEED -->
+    <div class="accordion-item">
+      <button class="accordion-btn" data-tool="speed">⚡ Скорость</button>
+      <div class="accordion-content">
+        <div class="button-group-5">
+          <button class="speed-btn" data-sp="0.5">0.5×</button>
+          <button class="speed-btn" data-sp="0.75">0.75×</button>
+          <button class="speed-btn on" data-sp="1">1×</button>
+          <button class="speed-btn" data-sp="1.5">1.5×</button>
+          <button class="speed-btn" data-sp="2">2×</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORMAT -->
+    <div class="accordion-item">
+      <button class="accordion-btn" data-tool="format">📦 Формат</button>
+      <div class="accordion-content">
+        <div class="label-small">Формат видео</div>
+        <div class="button-group-2col" style="margin-bottom:12px">
+          <button class="format-btn on" data-fmt="mp4">MP4</button>
+          <button class="format-btn" data-fmt="webm">WEBM</button>
+        </div>
+        <div class="label-small">Качество</div>
+        <div class="button-group-3">
+          <button class="quality-btn" data-q="low">Низкое</button>
+          <button class="quality-btn on" data-q="medium">Среднее</button>
+          <button class="quality-btn" data-q="high">Высокое</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACTION BUTTONS -->
+  <div class="editor-actions">
+    <button class="action-btn primary" id="btnSave">✂️ Сохранить видео</button>
+    <button class="action-btn secondary" id="btnCancel">Отмена</button>
   </div>
 </div>
 
@@ -387,33 +327,6 @@ body {
 </div>
 
 <div class="errtoast" id="errToast"></div>
-
-<!-- MERGE -->
-<div id="stateMerge">
-  <div class="merge-title">🔗 Склеить видео</div>
-  <div class="merge-slots">
-    <div class="merge-slot" id="mSlot1">
-      <button class="ms-remove" id="mRem1">✕</button>
-      <div class="ms-num">1️⃣</div>
-      <div class="ms-label" id="mLabel1">Выберите первое видео</div>
-      <div class="ms-info" id="mInfo1"></div>
-    </div>
-    <button class="merge-swap" id="mSwap">⇅ Поменять местами</button>
-    <div class="merge-slot" id="mSlot2">
-      <button class="ms-remove" id="mRem2">✕</button>
-      <div class="ms-num">2️⃣</div>
-      <div class="ms-label" id="mLabel2">Выберите второе видео</div>
-      <div class="ms-info" id="mInfo2"></div>
-    </div>
-  </div>
-  <div class="merge-fmt">
-    <button class="mfbtn on" data-mfmt="mp4">MP4</button>
-    <button class="mfbtn" data-mfmt="webm">WEBM</button>
-  </div>
-  <button class="merge-go" id="btnMerge" disabled>🔗 Склеить видео</button>
-  <input type="file" id="mergeInput1" accept="video/*" style="display:none">
-  <input type="file" id="mergeInput2" accept="video/*" style="display:none">
-</div>
 
 <script>
 // Без FFmpeg — используем MediaRecorder + Canvas API
@@ -485,11 +398,12 @@ function loadFile(f) {
 }
 
 // ── TOOL TABS ──
-const panels = { cut:'panelCut', rotate:'panelRotate', speed:'panelSpeed', format:'panelFormat' };
-document.querySelectorAll('.tool-tab').forEach(b => b.onclick = () => {
-  document.querySelectorAll('.tool-tab').forEach(x=>x.classList.remove('active'));
-  b.classList.add('active');
-  Object.entries(panels).forEach(([k,v]) => G(v).style.display = k===b.dataset.tool?'':'none');
+// Tool accordion
+document.querySelectorAll('.accordion-btn').forEach(btn => btn.onclick = () => {
+  document.querySelectorAll('.accordion-content').forEach(c => c.classList.remove('show'));
+  document.querySelectorAll('.accordion-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  btn.nextElementSibling.classList.add('show');
 });
 
 // ── PLAY ──
@@ -516,18 +430,18 @@ function updTF() { let t=`rotate(${rotAngle}deg)`; if(flipH)t+=' scaleX(-1)'; if
 function updRotBtns() { G('btnR90').classList.toggle('on',rotAngle!==0); G('btnR180').classList.toggle('on',rotAngle===180||rotAngle===270); }
 
 // ── SPEED ──
-document.querySelectorAll('.spbtn').forEach(b=>b.onclick=()=>{
-  document.querySelectorAll('.spbtn').forEach(x=>x.classList.remove('on'));
+document.querySelectorAll('.speed-btn').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.speed-btn').forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); speed=parseFloat(b.dataset.sp); videoEl.playbackRate=speed;
 });
 
 // ── FORMAT / QUALITY ──
-document.querySelectorAll('.fmbtn').forEach(b=>b.onclick=()=>{
-  document.querySelectorAll('.fmbtn').forEach(x=>x.classList.remove('on'));
+document.querySelectorAll('.format-btn').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.format-btn').forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); format=b.dataset.fmt;
 });
-document.querySelectorAll('.qlbtn').forEach(b=>b.onclick=()=>{
-  document.querySelectorAll('.qlbtn').forEach(x=>x.classList.remove('on'));
+document.querySelectorAll('.quality-btn').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.quality-btn').forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); quality=b.dataset.q;
 });
 
@@ -538,13 +452,18 @@ G('btnChange').onclick = () => {
   se.style.display='none'; su.style.display='';
   fInp.value=''; videoFile=null; videoEl.src=''; sbFrames.innerHTML='';
 };
+G('btnCancel').onclick = () => {
+  hideAllStates(); stHome.style.display='flex'; showBack(false);
+  se.style.display='none';
+  fInp.value=''; videoFile=null; videoEl.src=''; sbFrames.innerHTML='';
+};
 function resetAll() {
   startTime=0; endTime=videoDur; rotAngle=0; rotation=0; flipH=false; flipV=false;
   speed=1; format='mp4'; quality='medium'; invert=false;
-  document.querySelectorAll('.tfbtn').forEach(b=>b.classList.remove('on'));
-  document.querySelectorAll('.spbtn').forEach(b=>b.classList.toggle('on',b.dataset.sp==='1'));
-  document.querySelectorAll('.fmbtn').forEach(b=>b.classList.toggle('on',b.dataset.fmt==='mp4'));
-  document.querySelectorAll('.qlbtn').forEach(b=>b.classList.toggle('on',b.dataset.q==='medium'));
+  document.querySelectorAll('.icon-btn').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.speed-btn').forEach(b=>b.classList.toggle('on',b.dataset.sp==='1'));
+  document.querySelectorAll('.format-btn').forEach(b=>b.classList.toggle('on',b.dataset.fmt==='mp4'));
+  document.querySelectorAll('.quality-btn').forEach(b=>b.classList.toggle('on',b.dataset.q==='medium'));
   G('btnInvert').classList.remove('on');
   videoEl.style.transform=''; videoEl.playbackRate=1;
   updateTI(); updateSB();
@@ -939,198 +858,6 @@ window.addEventListener('resize',()=>{
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(generateFrames, 300);
 });
-
-// ═════════════════════════════════════════════════════════════
-// НАВИГАЦИЯ + СКЛЕЙКА
-// ═════════════════════════════════════════════════════════════
-
-const stHome = document.getElementById('stateHome');
-const stMerge = document.getElementById('stateMerge');
-
-function hideAllStates() {
-  [stHome, su, se, sp, sr, stMerge].forEach(el => { if(el) el.style.display = 'none'; });
-}
-function showBack(show) { G('btnBack').style.display = show ? 'block' : 'none'; }
-
-function goHome() {
-  hideAllStates();
-  stHome.style.display = 'flex';
-  showBack(false);
-  fInp.value = ''; videoFile = null; outBlob = null; videoEl.src = ''; sbFrames.innerHTML = '';
-  mFile1 = null; mFile2 = null;
-  G('mergeInput1').value = ''; G('mergeInput2').value = '';
-  updateMergeUI();
-}
-
-G('modeCut').onclick = () => { hideAllStates(); su.style.display = ''; showBack(true); };
-G('modeMerge').onclick = () => { hideAllStates(); stMerge.style.display = 'flex'; stMerge.style.flexDirection = 'column'; showBack(true); };
-G('btnBack').onclick = goHome;
-G('logoHome').onclick = e => { e.preventDefault(); goHome(); };
-
-// Override "Начать заново" кнопку чтобы идти домой
-const origBtnNew = G('btnNew').onclick;
-G('btnNew').onclick = goHome;
-
-G('btnChange').onclick = () => { hideAllStates(); su.style.display = ''; };
-
-// ═════════ MERGE ═════════
-let mFile1 = null, mFile2 = null, mFormat = 'mp4';
-
-G('mSlot1').onclick = () => { if(!mFile1) G('mergeInput1').click(); };
-G('mSlot2').onclick = () => { if(!mFile2) G('mergeInput2').click(); };
-G('mRem1').onclick = e => { e.stopPropagation(); mFile1=null; G('mergeInput1').value=''; updateMergeUI(); };
-G('mRem2').onclick = e => { e.stopPropagation(); mFile2=null; G('mergeInput2').value=''; updateMergeUI(); };
-G('mergeInput1').onchange = e => { if(e.target.files[0]){ mFile1=e.target.files[0]; updateMergeUI(); } };
-G('mergeInput2').onchange = e => { if(e.target.files[0]){ mFile2=e.target.files[0]; updateMergeUI(); } };
-G('mSwap').onclick = () => { [mFile1,mFile2]=[mFile2,mFile1]; updateMergeUI(); };
-document.querySelectorAll('[data-mfmt]').forEach(b => b.onclick = () => {
-  document.querySelectorAll('[data-mfmt]').forEach(x => x.classList.remove('on'));
-  b.classList.add('on'); mFormat = b.dataset.mfmt;
-});
-
-function updateMergeUI() {
-  const s1el=G('mSlot1'), s2el=G('mSlot2');
-  if(mFile1){ s1el.classList.add('has-file'); G('mLabel1').textContent=mFile1.name; G('mInfo1').textContent=fmtSz(mFile1.size); }
-  else{ s1el.classList.remove('has-file'); G('mLabel1').textContent='Выберите первое видео'; G('mInfo1').textContent=''; }
-  if(mFile2){ s2el.classList.add('has-file'); G('mLabel2').textContent=mFile2.name; G('mInfo2').textContent=fmtSz(mFile2.size); }
-  else{ s2el.classList.remove('has-file'); G('mLabel2').textContent='Выберите второе видео'; G('mInfo2').textContent=''; }
-  G('btnMerge').disabled = !(mFile1 && mFile2);
-}
-
-function safeSeek(video, time) {
-  return new Promise(resolve => {
-    if (Math.abs(video.currentTime - time) < 0.05) return resolve();
-    const h = () => { video.removeEventListener('seeked', h); resolve(); };
-    video.addEventListener('seeked', h);
-    video.currentTime = time;
-    setTimeout(() => { video.removeEventListener('seeked', h); resolve(); }, 2000);
-  });
-}
-
-G('btnMerge').onclick = async () => {
-  if(!mFile1 || !mFile2) return;
-  hideAllStates();
-  sp.style.display = 'flex'; sp.style.flexDirection = 'column';
-  G('pfill').style.width = '0%'; G('ppct').textContent = '0%';
-  G('ptitle').textContent = 'Склеиваем видео...';
-  G('psub').textContent = 'Подготовка';
-
-  try {
-    const mimeType = getBestMime(mFormat);
-    if(!mimeType) throw new Error('Формат не поддерживается. Выберите WEBM.');
-
-    const v1 = document.createElement('video');
-    const v2 = document.createElement('video');
-    v1.playsInline = v2.playsInline = true;
-    v1.muted = v2.muted = true;
-    v1.src = URL.createObjectURL(mFile1);
-    v2.src = URL.createObjectURL(mFile2);
-    await Promise.all([
-      new Promise((r,j) => { v1.onloadedmetadata = r; v1.onerror = () => j(new Error('Ошибка первого видео')); }),
-      new Promise((r,j) => { v2.onloadedmetadata = r; v2.onerror = () => j(new Error('Ошибка второго видео')); }),
-    ]);
-
-    const w = Math.max(v1.videoWidth||640, v2.videoWidth||640);
-    const h = Math.max(v1.videoHeight||360, v2.videoHeight||360);
-    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
-    const ctx = cv.getContext('2d');
-    const dur1 = v1.duration, dur2 = v2.duration, totalDur = dur1 + dur2;
-
-    const canvasStream = cv.captureStream(30);
-    const stream = new MediaStream(canvasStream.getTracks());
-    const chunks = [];
-    const rec = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 4000000 });
-    rec.ondataavailable = e => { if(e.data.size > 0) chunks.push(e.data); };
-
-    let resolveStop;
-    const recStopped = new Promise(r => { resolveStop = r; });
-    rec.addEventListener('stop', () => resolveStop(), { once: true });
-
-    let rafId, currentVid = v1;
-
-    function drawFrame() {
-      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
-      try {
-        const vw = currentVid.videoWidth || w, vh = currentVid.videoHeight || h;
-        const scale = Math.min(w/vw, h/vh);
-        ctx.drawImage(currentVid, (w-vw*scale)/2, (h-vh*scale)/2, vw*scale, vh*scale);
-      } catch(e) {}
-      rafId = requestAnimationFrame(drawFrame);
-    }
-
-    G('psub').textContent = 'Первое видео...';
-    await safeSeek(v1, 0);
-    rec.start(200);
-    drawFrame();
-    v1.play();
-
-    await new Promise(resolve => {
-      function tick() {
-        const pct = Math.min(49, (v1.currentTime / totalDur) * 100);
-        G('pfill').style.width = pct + '%'; G('ppct').textContent = Math.round(pct) + '%';
-        if (v1.ended || v1.currentTime >= dur1 - 0.05) { v1.pause(); resolve(); }
-        else setTimeout(tick, 120);
-      }
-      v1.addEventListener('ended', () => { v1.pause(); resolve(); }, { once: true });
-      tick();
-    });
-    G('pfill').style.width = '50%'; G('ppct').textContent = '50%';
-
-    G('psub').textContent = 'Второе видео...';
-    currentVid = v2;
-    await safeSeek(v2, 0);
-    v2.play();
-
-    await new Promise(resolve => {
-      function tick() {
-        const pct = 50 + Math.min(49, (v2.currentTime / totalDur) * 100);
-        G('pfill').style.width = pct + '%'; G('ppct').textContent = Math.round(pct) + '%';
-        if (v2.ended || v2.currentTime >= dur2 - 0.05) { v2.pause(); resolve(); }
-        else setTimeout(tick, 120);
-      }
-      v2.addEventListener('ended', () => { v2.pause(); resolve(); }, { once: true });
-      tick();
-    });
-
-    G('pfill').style.width = '98%'; G('ppct').textContent = '98%';
-    G('psub').textContent = 'Финализация...';
-
-    cancelAnimationFrame(rafId);
-    rec.stop();
-    await recStopped;
-
-    stream.getTracks().forEach(t => t.stop());
-    URL.revokeObjectURL(v1.src);
-    URL.revokeObjectURL(v2.src);
-
-    const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
-    outBlob = new Blob(chunks, { type: mimeType });
-    if (outBlob.size < 100) throw new Error('Результат пустой — попробуйте WEBM');
-
-    G('pfill').style.width = '100%'; G('ppct').textContent = '100%';
-    setTimeout(() => {
-      hideAllStates();
-      sr.style.display = 'flex'; sr.style.flexDirection = 'column';
-      const tooBig = outBlob.size > 4.4 * 1024 * 1024;
-      G('rmeta').textContent = fmtSz(outBlob.size) + ' · ' + fmtT(totalDur) + ' · ' + ext.toUpperCase();
-      const sendBtn = G('btnSendTg');
-      if (tooBig && tgApp) {
-        sendBtn.disabled = true; sendBtn.style.opacity = '0.5';
-        sendBtn.textContent = '⚠️ Слишком большое для Telegram';
-      } else {
-        sendBtn.disabled = false; sendBtn.style.opacity = '1';
-        sendBtn.style.background = '#229ED9';
-        sendBtn.textContent = '📤 Отправить в Telegram';
-      }
-      checkTgBtn();
-    }, 300);
-
-  } catch(e) {
-    hideAllStates();
-    stMerge.style.display = 'flex'; stMerge.style.flexDirection = 'column';
-    showErr('Ошибка: ' + e.message);
-  }
-};
 </script>
 
 </body>
