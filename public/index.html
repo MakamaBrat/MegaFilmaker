@@ -592,6 +592,7 @@ G('btnSave').onclick = async () => {
     const rotated=(rotation===90||rotation===270);
     cv.width=rotated?origH:origW; cv.height=rotated?origW:origH;
     const src=document.createElement('video'); src.src=URL.createObjectURL(videoFile); src.muted=true; src.playbackRate=speed;
+    src.playsInline=true;
     await new Promise(r=>{src.onloadedmetadata=r;});
     let audioStream=null;
     try{const actx=new AudioContext();const sn=actx.createMediaElementSource(src);const dest=actx.createMediaStreamDestination();sn.connect(dest);audioStream=dest.stream;}catch(e){}
@@ -600,18 +601,27 @@ G('btnSave').onclick = async () => {
     const combined=new MediaStream(tracks);
     const chunks=[]; const rec=new MediaRecorder(combined,{mimeType,videoBitsPerSecond:qBitrate()});
     rec.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
-    src.currentTime=startTime; await new Promise(r=>{src.onseeked=r;});
+    // Готовим промис ДО вызова rec.stop() чтобы не пропустить событие
+    let resolveRecStop;
+    const recStopped = new Promise(r => { resolveRecStop = r; });
+    rec.addEventListener('stop', () => resolveRecStop(), { once: true });
+
+    if (startTime > 0.05) {
+      src.currentTime = startTime;
+      await new Promise(r => { src.addEventListener('seeked', r, {once:true}); });
+    }
     let rafId; const totalDur=invert?videoDur-(endTime-startTime):(endTime-startTime);
     function drawFrame(){if(src.paused||src.ended)return;ctx.save();ctx.clearRect(0,0,cv.width,cv.height);ctx.translate(cv.width/2,cv.height/2);ctx.rotate(rotation*Math.PI/180);if(flipH)ctx.scale(-1,1);if(flipV)ctx.scale(1,-1);ctx.drawImage(src,-origW/2,-origH/2,origW,origH);ctx.restore();rafId=requestAnimationFrame(drawFrame);}
     rec.start(100); src.play(); drawFrame();
     if(invert&&startTime>0&&endTime<videoDur){
-      src.currentTime=0;await new Promise(r=>{src.onseeked=r;});src.play();drawFrame();await waitUntil(src,startTime,totalDur,0,50);src.pause();
-      src.currentTime=endTime;await new Promise(r=>{src.onseeked=r;});src.play();drawFrame();await waitUntil(src,videoDur,totalDur,50,100);src.pause();
+      src.currentTime=0;await new Promise(r=>{src.addEventListener('seeked',r,{once:true});});src.play();drawFrame();await waitUntil(src,startTime,totalDur,0,50);src.pause();
+      src.currentTime=endTime;await new Promise(r=>{src.addEventListener('seeked',r,{once:true});});src.play();drawFrame();await waitUntil(src,videoDur,totalDur,50,100);src.pause();
     } else { await waitUntil(src,invert?videoDur:endTime,totalDur,0,100); src.pause(); }
-    cancelAnimationFrame(rafId); rec.stop(); await new Promise(r=>{rec.onstop=r;});
+    cancelAnimationFrame(rafId); rec.stop(); await recStopped;
     combined.getTracks().forEach(t=>t.stop()); URL.revokeObjectURL(src.src);
     const ext=mimeType.includes('mp4')?'mp4':'webm';
     outBlob=new Blob(chunks,{type:mimeType});
+    if(outBlob.size<100) throw new Error('Результат пустой — попробуйте формат WEBM');
     showResult(fmtSz(outBlob.size)+' · '+fmtT(totalDur/speed)+' · '+ext.toUpperCase());
   } catch(e) { hideAll(); se.style.display='flex'; se.style.flexDirection='column'; showErr('Ошибка: '+e.message); }
 };
@@ -635,92 +645,147 @@ function updateMergeUI() {
   G('btnMerge').disabled=!(mFile1&&mFile2);
 }
 
+// Безопасный seek — не зависнет если уже на нужной позиции
+function safeSeek(video, time) {
+  return new Promise(resolve => {
+    if (Math.abs(video.currentTime - time) < 0.05) return resolve();
+    const h = () => { video.removeEventListener('seeked', h); resolve(); };
+    video.addEventListener('seeked', h);
+    video.currentTime = time;
+    // Страховка: если seeked не сработает за 2 сек
+    setTimeout(() => { video.removeEventListener('seeked', h); resolve(); }, 2000);
+  });
+}
+
+// Ждём пока видео доиграет до конца
+function waitVideoEnd(video) {
+  return new Promise(resolve => {
+    function check() {
+      if (video.ended || video.currentTime >= video.duration - 0.05) {
+        video.pause(); resolve();
+      } else {
+        setTimeout(check, 100);
+      }
+    }
+    // Также слушаем событие ended на случай если check пропустит
+    video.addEventListener('ended', () => { video.pause(); resolve(); }, { once: true });
+    check();
+  });
+}
+
 G('btnMerge').onclick = async () => {
   if(!mFile1||!mFile2) return;
   hideAll(); sp.style.display='flex'; sp.style.flexDirection='column';
   G('pfill').style.width='0%'; G('ppct').textContent='0%';
-  G('ptitle').textContent='Склеиваем видео...'; G('psub').textContent='Запись двух видео';
+  G('ptitle').textContent='Склеиваем видео...'; G('psub').textContent='Подготовка';
 
   try {
     const mimeType = getBestMime(mFormat);
     if(!mimeType) throw new Error('Формат не поддерживается. Выберите WEBM.');
 
     // Загружаем оба видео
-    const v1 = document.createElement('video'); v1.src=URL.createObjectURL(mFile1); v1.muted=true;
-    const v2 = document.createElement('video'); v2.src=URL.createObjectURL(mFile2); v2.muted=true;
-    await Promise.all([new Promise(r=>{v1.onloadedmetadata=r;}), new Promise(r=>{v2.onloadedmetadata=r;})]);
+    const v1 = document.createElement('video');
+    const v2 = document.createElement('video');
+    v1.playsInline = v2.playsInline = true;
+    v1.muted = v2.muted = true;
+    v1.src = URL.createObjectURL(mFile1);
+    v2.src = URL.createObjectURL(mFile2);
+    await Promise.all([
+      new Promise((r,j) => { v1.onloadedmetadata = r; v1.onerror = () => j(new Error('Не удалось открыть первое видео')); }),
+      new Promise((r,j) => { v2.onloadedmetadata = r; v2.onerror = () => j(new Error('Не удалось открыть второе видео')); }),
+    ]);
 
-    const w = Math.max(v1.videoWidth, v2.videoWidth);
-    const h = Math.max(v1.videoHeight, v2.videoHeight);
-    const cv = document.createElement('canvas'); cv.width=w; cv.height=h;
+    const w = Math.max(v1.videoWidth||640, v2.videoWidth||640);
+    const h = Math.max(v1.videoHeight||360, v2.videoHeight||360);
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
     const ctx = cv.getContext('2d');
 
-    // Audio
-    const actx = new AudioContext();
-    let audioStream = null;
-    try {
-      const dest = actx.createMediaStreamDestination();
-      // Сначала подключаем v1
-      const src1 = actx.createMediaElementSource(v1);
-      src1.connect(dest);
-      audioStream = dest.stream;
-      // v2 подключим позже после свитча (через gain node)
-    } catch(e) {}
+    const dur1 = v1.duration, dur2 = v2.duration, totalDur = dur1 + dur2;
 
+    // Canvas stream (видео)
     const canvasStream = cv.captureStream(30);
-    const allTracks = [...canvasStream.getTracks(), ...(audioStream?audioStream.getTracks():[])];
-    const stream = new MediaStream(allTracks);
+    const stream = new MediaStream(canvasStream.getTracks());
 
+    // Recorder
     const chunks = [];
     const rec = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 4e6 });
-    rec.ondataavailable = e => { if(e.data.size>0) chunks.push(e.data); };
+    rec.ondataavailable = e => { if(e.data.size > 0) chunks.push(e.data); };
 
-    const dur1 = v1.duration, dur2 = v2.duration, totalDur = dur1 + dur2;
-    let rafId, currentVid = v1;
+    // Промис на окончание записи — создаём ЗАРАНЕЕ
+    const recStopped = new Promise(resolve => { rec.onstop = resolve; });
+
+    let rafId;
+    let currentVid = v1;
 
     function drawFrame() {
-      ctx.fillStyle='#000'; ctx.fillRect(0,0,w,h);
-      const vw=currentVid.videoWidth, vh=currentVid.videoHeight;
-      const scale=Math.min(w/vw,h/vh);
-      const dx=(w-vw*scale)/2, dy=(h-vh*scale)/2;
-      ctx.drawImage(currentVid, dx, dy, vw*scale, vh*scale);
-      rafId=requestAnimationFrame(drawFrame);
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
+      try {
+        const vw = currentVid.videoWidth || w, vh = currentVid.videoHeight || h;
+        const scale = Math.min(w / vw, h / vh);
+        const dx = (w - vw * scale) / 2, dy = (h - vh * scale) / 2;
+        ctx.drawImage(currentVid, dx, dy, vw * scale, vh * scale);
+      } catch(e) {} // игнорируем ошибки рисования
+      rafId = requestAnimationFrame(drawFrame);
     }
 
-    // Часть 1
-    v1.currentTime=0; await new Promise(r=>{v1.onseeked=r;});
-    rec.start(100); v1.play(); drawFrame();
+    // ── ЧАСТЬ 1 ──
+    G('psub').textContent = 'Записываем первое видео';
+    await safeSeek(v1, 0);
+    rec.start(200);
+    drawFrame();
+    await v1.play().catch(() => {});
+
+    // Ждём конец первого видео, обновляя прогресс
     await new Promise(resolve => {
-      function check() {
-        const pct = (v1.currentTime / totalDur) * 100;
-        G('pfill').style.width=pct+'%'; G('ppct').textContent=Math.round(pct)+'%';
-        if(v1.currentTime>=dur1-.1||v1.ended) { v1.pause(); resolve(); }
-        else setTimeout(check, 150);
-      } check();
+      function tick() {
+        const pct = Math.min(49, (v1.currentTime / totalDur) * 100);
+        G('pfill').style.width = pct + '%'; G('ppct').textContent = Math.round(pct) + '%';
+        if (v1.ended || v1.currentTime >= dur1 - 0.05) { v1.pause(); resolve(); }
+        else setTimeout(tick, 120);
+      }
+      v1.addEventListener('ended', () => { v1.pause(); resolve(); }, { once: true });
+      tick();
     });
 
-    // Часть 2
+    G('pfill').style.width = '50%'; G('ppct').textContent = '50%';
+
+    // ── ЧАСТЬ 2 ──
+    G('psub').textContent = 'Записываем второе видео';
     currentVid = v2;
-    // Переподключаем аудио для v2
-    try { const src2 = actx.createMediaElementSource(v2); const dest2 = actx.createMediaStreamDestination(); src2.connect(dest2); dest2.stream.getTracks().forEach(t=>stream.addTrack(t)); } catch(e){}
-    v2.currentTime=0; await new Promise(r=>{v2.onseeked=r;});
-    v2.play(); drawFrame();
+    await safeSeek(v2, 0);
+    await v2.play().catch(() => {});
+
+    // Ждём конец второго видео
     await new Promise(resolve => {
-      function check() {
-        const pct = ((dur1 + v2.currentTime) / totalDur) * 100;
-        G('pfill').style.width=pct+'%'; G('ppct').textContent=Math.round(pct)+'%';
-        if(v2.currentTime>=dur2-.1||v2.ended) { v2.pause(); resolve(); }
-        else setTimeout(check, 150);
-      } check();
+      function tick() {
+        const pct = 50 + Math.min(49, (v2.currentTime / totalDur) * 100);
+        G('pfill').style.width = pct + '%'; G('ppct').textContent = Math.round(pct) + '%';
+        if (v2.ended || v2.currentTime >= dur2 - 0.05) { v2.pause(); resolve(); }
+        else setTimeout(tick, 120);
+      }
+      v2.addEventListener('ended', () => { v2.pause(); resolve(); }, { once: true });
+      tick();
     });
 
-    cancelAnimationFrame(rafId); rec.stop(); await new Promise(r=>{rec.onstop=r;});
-    stream.getTracks().forEach(t=>t.stop()); URL.revokeObjectURL(v1.src); URL.revokeObjectURL(v2.src);
+    G('pfill').style.width = '98%'; G('ppct').textContent = '98%';
+    G('psub').textContent = 'Финализация...';
 
-    const ext = mimeType.includes('mp4')?'mp4':'webm';
-    outBlob = new Blob(chunks, {type:mimeType});
-    showResult(fmtSz(outBlob.size)+' · '+fmtT(totalDur)+' · '+ext.toUpperCase());
-  } catch(e) { hideAll(); sm.style.display='flex'; showErr('Ошибка: '+e.message); }
+    // ── СТОП ──
+    cancelAnimationFrame(rafId);
+    rec.stop();
+    await recStopped; // ждём промис, созданный заранее
+
+    stream.getTracks().forEach(t => t.stop());
+    URL.revokeObjectURL(v1.src);
+    URL.revokeObjectURL(v2.src);
+
+    const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+    outBlob = new Blob(chunks, { type: mimeType });
+
+    if (outBlob.size < 100) throw new Error('Результат пустой — попробуйте другие видео или формат WEBM');
+
+    showResult(fmtSz(outBlob.size) + ' · ' + fmtT(totalDur) + ' · ' + ext.toUpperCase());
+  } catch(e) { hideAll(); sm.style.display='flex'; showErr('Ошибка: ' + e.message); }
 };
 
 // ═══════ RESULT ═══════
