@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>ВидеоРез</title>
+<title>Обрезать видео онлайн</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -16,24 +16,159 @@
   --danger: #ef4444;
   --app-h: 100vh;
 }
-html, body { height: 100%; overflow: hidden; }
+html, body { height: 100%; }
 body {
   font-family: 'Rubik','Segoe UI',sans-serif;
   background:#fff; color:var(--text);
   font-size:13px; font-weight:300;
   height: var(--app-h);
+  min-height: var(--app-h);
   display:flex; flex-direction:column;
+  overflow: hidden;
 }
-@supports (height: 100dvh) { body { height: 100dvh; } }
+/* Современные браузеры — динамическая высота (учитывает адресную строку) */
+@supports (height: 100dvh) {
+  body { height: 100dvh; min-height: 100dvh; }
+}
 
 /* HEADER */
-.header { background:#101114; height:48px; display:flex; align-items:center; padding:0 14px; gap:8px; flex-shrink:0; z-index:10; }
-.logo { color:#fff; font-size:14px; font-weight:600; text-decoration:none; display:flex; align-items:center; gap:7px; }
-.logo-ic { background:var(--accent); border-radius:6px; width:26px; height:26px; display:flex; align-items:center; justify-content:center; font-size:13px; }
-.tg-badge { margin-left:auto; background:rgba(41,98,255,.2); color:#7baeff; border:1px solid rgba(41,98,255,.35); border-radius:20px; padding:2px 9px; font-size:10px; }
-.back-btn { background:none; border:none; color:#fff; font-size:18px; cursor:pointer; padding:4px; margin-right:2px; display:none; }
+.header { background:#101114; height:52px; display:flex; align-items:center; padding:0 16px; gap:10px; flex-shrink:0; }
+.logo { color:#fff; font-size:15px; font-weight:600; text-decoration:none; display:flex; align-items:center; gap:8px; }
+.logo-ic { background:var(--accent); border-radius:6px; width:28px; height:28px; display:flex; align-items:center; justify-content:center; font-size:14px; }
+.tg-badge { margin-left:auto; background:rgba(41,98,255,.2); color:#7baeff; border:1px solid rgba(41,98,255,.35); border-radius:20px; padding:3px 10px; font-size:11px; }
 
-/* HOME */
+/* UPLOAD */
+#stateUpload { max-width:540px; margin:0 auto; padding:0 16px 40px; width:100%; overflow-y:auto; flex:1; }
+.app-title { text-align:center; padding:28px 16px 20px; }
+.app-title h1 { font-size:26px; font-weight:700; margin-bottom:6px; }
+.app-title h2 { font-size:14px; color:var(--muted); font-weight:300; }
+.upload-area { border:2px dashed #d1d5db; border-radius:12px; background:#fafafa; text-align:center; padding:44px 24px; cursor:pointer; transition:all .2s; }
+.upload-area:hover, .upload-area.drag { border-color:var(--accent); background:rgba(41,98,255,.03); }
+.upload-btn { display:inline-flex; align-items:center; gap:8px; background:var(--accent); color:#fff; border:none; border-radius:6px; padding:13px 30px; font-size:16px; font-weight:500; cursor:pointer; font-family:inherit; margin-top:18px; transition:background .2s; }
+.upload-btn:hover { background:var(--accent-h); }
+.drop-hint { margin-top:12px; color:var(--muted); font-size:13px; }
+.fmt-tags { display:flex; flex-wrap:wrap; gap:5px; justify-content:center; margin-top:14px; }
+.fmt-tag { background:#f3f4f6; border:1px solid var(--border); border-radius:4px; padding:3px 8px; font-size:11px; color:var(--muted); }
+#fileInput { display:none; }
+
+/* EDITOR */
+#stateEditor { display:none; flex:1; flex-direction:column; }
+
+/* TOOLBAR */
+.toolbar { background:#f8f8f8; border-bottom:1px solid #e0e0e0; display:flex; align-items:center; padding:0 8px; height:46px; overflow-x:auto; scrollbar-width:none; flex-shrink:0; gap:2px; }
+.toolbar::-webkit-scrollbar { display:none; }
+.tool-tab { display:flex; align-items:center; gap:5px; padding:6px 10px; border-radius:6px; border:none; background:transparent; color:var(--text); font-size:12px; font-family:inherit; cursor:pointer; white-space:nowrap; transition:all .15s; }
+.tool-tab:hover { background:rgba(0,0,0,.05); }
+.tool-tab.active { background:rgba(41,98,255,.1); color:var(--accent); }
+.tsep { width:1px; height:22px; background:var(--border); margin:0 4px; }
+.tr { margin-left:auto; display:flex; gap:5px; }
+.tbtn { background:transparent; border:1px solid var(--border); color:var(--muted); border-radius:5px; padding:4px 9px; font-size:12px; cursor:pointer; font-family:inherit; }
+.tbtn:hover { border-color:#999; color:var(--text); }
+
+/* VIDEO */
+.ebody { display:flex; flex:1; min-height:0; }
+.vwrap { flex:1; background:#1a1a1a; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; min-height:200px; }
+#videoEl { max-width:100%; max-height:100%; display:block; }
+.play-ov { position:absolute; width:52px; height:52px; background:rgba(255,255,255,.15); backdrop-filter:blur(4px); border-radius:50%; border:none; color:#fff; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .2s; }
+.vwrap:hover .play-ov { opacity:1; }
+
+/* SIDE */
+.side { width:210px; flex-shrink:0; border-left:1px solid var(--border); background:#fff; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:14px; }
+.stitle { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:8px; }
+.tfgrid { display:grid; grid-template-columns:1fr 1fr; gap:5px; }
+.tfbtn { background:#f9fafb; border:1px solid var(--border); border-radius:6px; padding:9px 5px; font-family:inherit; font-size:11px; color:var(--text); cursor:pointer; text-align:center; display:flex; flex-direction:column; align-items:center; gap:3px; transition:all .15s; }
+.tfbtn:hover { border-color:var(--accent); }
+.tfbtn.on { border-color:var(--accent); color:var(--accent); background:rgba(41,98,255,.06); }
+.tfbtn .ic { font-size:18px; line-height:1; }
+.tfbtn .lb { font-size:10px; color:var(--muted); }
+.tfbtn.on .lb { color:var(--accent); }
+.spgrid { display:flex; flex-wrap:wrap; gap:4px; }
+.spbtn { flex:1; min-width:38px; background:#f9fafb; border:1px solid var(--border); border-radius:5px; padding:7px 3px; font-size:12px; font-weight:600; text-align:center; cursor:pointer; font-family:inherit; transition:all .15s; }
+.spbtn:hover { border-color:#f59e0b; }
+.spbtn.on { background:rgba(245,158,11,.1); border-color:#f59e0b; color:#b45309; }
+.fmgrid { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:8px; }
+.fmbtn { flex:1; min-width:36px; background:#f9fafb; border:1px solid var(--border); border-radius:5px; padding:6px 3px; font-size:12px; font-weight:700; text-align:center; cursor:pointer; font-family:inherit; transition:all .15s; }
+.fmbtn:hover, .fmbtn.on { background:rgba(41,98,255,.07); border-color:var(--accent); color:var(--accent); }
+.qlrow { display:flex; gap:4px; }
+.qlbtn { flex:1; background:#f9fafb; border:1px solid var(--border); border-radius:5px; padding:5px 3px; font-size:11px; text-align:center; cursor:pointer; font-family:inherit; transition:all .15s; }
+.qlbtn.on { background:rgba(34,197,94,.08); border-color:var(--success); color:#15803d; }
+
+/* BOTTOM NAV */
+.bnav { background:#fff; border-top:1px solid var(--border); padding:9px 12px; flex-shrink:0; }
+.fbar { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.fname { font-size:12px; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fmeta { font-size:11px; color:var(--muted); white-space:nowrap; }
+.chbtn { background:transparent; border:1px solid var(--border); border-radius:4px; padding:3px 7px; font-size:11px; cursor:pointer; color:var(--muted); }
+.chbtn:hover { border-color:#999; color:var(--text); }
+
+/* STORYBOARD */
+.sb { position:relative; height:54px; background:#2a2a2a; border-radius:4px; overflow:hidden; cursor:crosshair; margin-bottom:8px; display:flex; touch-action:none; user-select:none; -webkit-user-select:none; }
+.sbframes { display:flex; height:100%; flex:1; overflow:hidden; }
+.sbframe { flex-shrink:0; height:100%; overflow:hidden; background:#333; border-right:1px solid rgba(0,0,0,.3); }
+.sbframe img { width:100%; height:100%; object-fit:cover; display:block; }
+.sbframe.ld { animation:pulse 1.2s infinite; }
+@keyframes pulse { 0%,100%{opacity:.5} 50%{opacity:.9} }
+.sbov { position:absolute; inset:0; pointer-events:none; }
+.sbmask { position:absolute; top:0; bottom:0; background:rgba(0,0,0,.55); z-index:2; }
+.sbsel { position:absolute; top:0; bottom:0; border:2px solid #2962ff; z-index:3; pointer-events:none; }
+.sbh { position:absolute; top:0; bottom:0; width:44px; cursor:ew-resize; z-index:5; pointer-events:all; display:flex; align-items:center; justify-content:center; }
+.sbhbar { width:5px; height:60%; background:#2962ff; border-radius:3px; box-shadow:0 0 0 1px rgba(255,255,255,.3); }
+.sbhl { left:0; transform:translateX(-50%); }
+.sbhr { right:0; transform:translateX(50%); }
+.sbph { position:absolute; top:0; bottom:0; width:2px; background:#fff; z-index:4; pointer-events:none; }
+.sbhint { position:absolute; top:-24px; background:rgba(0,0,0,.7); color:#fff; border-radius:4px; padding:2px 6px; font-size:11px; transform:translateX(-50%); pointer-events:none; white-space:nowrap; display:none; z-index:10; }
+
+/* CONTROLS */
+.crow { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+.pbtn { width:34px; height:34px; background:#f3f4f6; border:1px solid var(--border); border-radius:50%; cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .15s; }
+.pbtn:hover { background:var(--border); }
+.tstepper { display:flex; align-items:center; gap:1px; background:#f9fafb; border:1px solid var(--border); border-radius:5px; padding:4px 7px; font-size:14px; font-variant-numeric:tabular-nums; }
+.tinp { background:transparent; border:none; outline:none; width:22px; text-align:center; font-family:inherit; font-size:14px; color:var(--text); }
+.tsep2 { color:#aaa; font-size:12px; }
+.dash { color:var(--muted); margin:0 2px; }
+.invbtn { background:#f9fafb; border:1px solid var(--border); border-radius:5px; padding:5px 9px; font-size:12px; cursor:pointer; font-family:inherit; color:var(--muted); transition:all .15s; }
+.invbtn:hover { border-color:#999; color:var(--text); }
+.invbtn.on { background:rgba(245,158,11,.1); border-color:#f59e0b; color:#b45309; }
+.durb { background:var(--accent); color:#fff; border-radius:12px; padding:3px 10px; font-size:12px; font-weight:500; margin-left:auto; }
+.savebtn { background:var(--accent); color:#fff; border:none; border-radius:5px; padding:9px 20px; font-size:14px; font-weight:500; font-family:inherit; cursor:pointer; transition:background .2s; white-space:nowrap; }
+.savebtn:hover { background:var(--accent-h); }
+.savebtn:disabled { opacity:.55; cursor:not-allowed; }
+
+/* PROGRESS OVERLAY */
+#stateProgress { display:none; flex-direction:column; align-items:center; justify-content:center; flex:1; padding:40px 20px; }
+.pbox { background:#fff; border-radius:16px; padding:32px 36px; text-align:center; max-width:340px; width:90%; box-shadow:0 4px 24px rgba(0,0,0,.1); }
+.spinner { width:46px; height:46px; border:4px solid #e5e7eb; border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 14px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.ptitle { font-size:16px; font-weight:600; margin-bottom:4px; }
+.psub { font-size:13px; color:var(--muted); margin-bottom:14px; }
+.pbar { height:6px; background:#e5e7eb; border-radius:3px; overflow:hidden; margin-bottom:5px; }
+.pfill { height:100%; background:var(--accent); border-radius:3px; transition:width .3s; width:0%; }
+.ppct { font-size:13px; color:var(--muted); }
+
+/* RESULT */
+#stateResult { display:none; flex-direction:column; align-items:center; justify-content:center; flex:1; padding:40px 20px; }
+.rbox { background:#fff; border-radius:16px; padding:32px 36px; text-align:center; max-width:340px; width:90%; box-shadow:0 4px 24px rgba(0,0,0,.1); }
+.ric { font-size:46px; margin-bottom:10px; }
+.rtitle { font-size:19px; font-weight:700; color:var(--success); margin-bottom:4px; }
+.rmeta { font-size:13px; color:var(--muted); margin-bottom:18px; }
+.dlbtn { width:100%; background:var(--success); border:none; border-radius:6px; padding:13px; color:#fff; font-size:15px; font-weight:600; font-family:inherit; cursor:pointer; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:6px; transition:background .2s; }
+.dlbtn:hover { background:#16a34a; }
+.dlbtn:disabled { opacity:.6; cursor:not-allowed; }
+.newbtn { width:100%; background:transparent; border:1px solid var(--border); border-radius:6px; padding:9px; color:var(--muted); font-size:13px; font-family:inherit; cursor:pointer; }
+.newbtn:hover { border-color:#999; color:var(--text); }
+
+/* ERROR */
+.errtoast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#fef2f2; border:1px solid #fca5a5; color:var(--danger); border-radius:8px; padding:10px 16px; font-size:13px; z-index:2000; display:none; max-width:90vw; text-align:center; box-shadow:0 4px 12px rgba(0,0,0,.1); }
+.errtoast.show { display:block; }
+
+@media (max-width:600px) {
+  .side { display:none; }
+  .durb { display:none; }
+  .app-title h1 { font-size:22px; }
+  .vwrap { max-height:42vh; }
+}
+
+/* HOME SCREEN */
 #stateHome { display:flex; flex:1; flex-direction:column; align-items:center; justify-content:center; padding:20px 16px; }
 .home-title { text-align:center; margin-bottom:24px; }
 .home-title h1 { font-size:24px; font-weight:700; margin-bottom:4px; }
@@ -44,139 +179,22 @@ body {
 .mode-card .mc-icon { font-size:36px; margin-bottom:8px; }
 .mode-card .mc-name { font-size:15px; font-weight:600; margin-bottom:4px; }
 .mode-card .mc-desc { font-size:11px; color:var(--muted); line-height:1.5; }
+.back-btn { background:none; border:none; color:#fff; font-size:18px; cursor:pointer; padding:4px; margin-right:2px; display:none; }
 
-/* UPLOAD */
-#stateUpload { display:none; max-width:540px; margin:0 auto; padding:0 16px 20px; width:100%; overflow-y:auto; flex:1; }
-.app-title { text-align:center; padding:20px 10px 16px; }
-.app-title h1 { font-size:22px; font-weight:700; margin-bottom:4px; }
-.app-title h2 { font-size:13px; color:var(--muted); font-weight:300; }
-.upload-area { border:2px dashed #d1d5db; border-radius:12px; background:#fafafa; text-align:center; padding:32px 20px; cursor:pointer; transition:all .2s; }
-.upload-area:hover, .upload-area.drag { border-color:var(--accent); background:rgba(41,98,255,.03); }
-.upload-btn { display:inline-flex; align-items:center; gap:6px; background:var(--accent); color:#fff; border:none; border-radius:6px; padding:11px 24px; font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; margin-top:14px; }
-.drop-hint { margin-top:8px; color:var(--muted); font-size:12px; }
-.fmt-tags { display:flex; flex-wrap:wrap; gap:4px; justify-content:center; margin-top:10px; }
-.fmt-tag { background:#f3f4f6; border:1px solid var(--border); border-radius:4px; padding:2px 7px; font-size:10px; color:var(--muted); }
-#fileInput, #mergeInput1, #mergeInput2 { display:none; }
-
-/* EDITOR */
-#stateEditor { display:none; flex:1; flex-direction:column; min-height:0; }
-.editor-top { display:flex; flex-direction:column; flex:1; min-height:0; gap:8px; padding:8px; }
-.vwrap { flex:1; background:#1a1a1a; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; min-height:100px; border-radius:8px; }
-#videoEl { max-width:100%; max-height:100%; display:block; }
-.play-ov { position:absolute; width:44px; height:44px; background:rgba(255,255,255,.15); backdrop-filter:blur(4px); border-radius:50%; border:none; color:#fff; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .2s; z-index:2; }
-.vwrap:hover .play-ov { opacity:1; }
-
-/* TIMELINE */
-.tl-section { background:#f8f8f8; border-radius:8px; padding:10px; }
-.tl-label { font-size:11px; font-weight:600; color:var(--muted); margin-bottom:6px; text-transform:uppercase; }
-.sb { position:relative; height:48px; background:#2a2a2a; border-radius:6px; overflow:hidden; cursor:crosshair; display:flex; touch-action:none; user-select:none; margin-bottom:6px; }
-.sbframes { display:flex; height:100%; flex:1; overflow:hidden; }
-.sbframe { flex-shrink:0; height:100%; overflow:hidden; background:#333; border-right:1px solid rgba(0,0,0,.3); }
-.sbframe img { width:100%; height:100%; object-fit:cover; display:block; }
-.sbframe.ld { animation:pulse 1.2s infinite; }
-@keyframes pulse { 0%,100%{opacity:.5} 50%{opacity:.9} }
-.sbov { position:absolute; inset:0; pointer-events:none; }
-.sbmask { position:absolute; top:0; bottom:0; background:rgba(0,0,0,.55); z-index:2; }
-.sbsel { position:absolute; top:0; bottom:0; border:2px solid #2962ff; z-index:3; pointer-events:none; }
-.sbh { position:absolute; top:0; bottom:0; width:40px; cursor:ew-resize; z-index:5; pointer-events:all; display:flex; align-items:center; justify-content:center; }
-.sbhbar { width:3px; height:50%; background:#2962ff; border-radius:3px; }
-.sbhl { left:0; transform:translateX(-50%); }
-.sbhr { right:0; transform:translateX(50%); }
-.sbph { position:absolute; top:0; bottom:0; width:2px; background:#fff; z-index:4; pointer-events:none; }
-.sbhint { position:absolute; top:-22px; background:rgba(0,0,0,.7); color:#fff; border-radius:4px; padding:2px 5px; font-size:10px; transform:translateX(-50%); white-space:nowrap; display:none; z-index:10; }
-
-.tl-controls { display:flex; gap:6px; align-items:center; }
-.pbtn { width:32px; height:32px; background:#f3f4f6; border:1px solid var(--border); border-radius:50%; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.pbtn:hover { background:var(--border); }
-.time-display { display:flex; gap:3px; align-items:center; flex:1; }
-.tstepper { display:flex; align-items:center; gap:1px; background:#f9fafb; border:1px solid var(--border); border-radius:4px; padding:3px 5px; font-size:11px; }
-.tinp { background:transparent; border:none; outline:none; width:18px; text-align:center; font-family:'Courier New',monospace; font-size:11px; color:var(--text); }
-.tsep2 { color:#aaa; font-size:9px; }
-.dash { color:var(--muted); margin:0 2px; font-size:11px; }
-.dur-badge { background:var(--accent); color:#fff; border-radius:6px; padding:3px 8px; font-size:10px; margin-left:auto; }
-
-/* TOOLS PANEL - MODAL */
-.tools-panel { background:#f8f8f8; border-radius:8px; padding:10px; margin-bottom:8px; }
-.tools-header { display:flex; gap:4px; margin-bottom:6px; }
-.tool-btn { flex:1; background:#fff; border:1px solid var(--border); border-radius:5px; padding:8px 6px; font-size:11px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap; transition:all .2s; }
-.tool-btn:hover { border-color:var(--accent); color:var(--accent); }
-.tool-btn.on { background:rgba(41,98,255,.1); border-color:var(--accent); color:var(--accent); }
-
-.tool-content { display:none; }
-.tool-content.active { display:block; }
-
-.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-.grid-btn { background:#fff; border:1px solid var(--border); border-radius:6px; padding:12px 8px; font-family:inherit; font-size:12px; color:var(--text); cursor:pointer; text-align:center; display:flex; flex-direction:column; align-items:center; gap:4px; transition:all .15s; }
-.grid-btn:hover { border-color:var(--accent); }
-.grid-btn.on { border-color:var(--accent); color:var(--accent); background:rgba(41,98,255,.06); }
-.grid-btn .icon { font-size:18px; }
-
-.speed-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:4px; }
-.speed-btn { background:#fff; border:1px solid var(--border); border-radius:5px; padding:8px 4px; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; }
-.speed-btn.on { background:rgba(245,158,11,.1); border-color:#f59e0b; color:#b45309; }
-
-.fmt-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:6px; }
-.fmt-btn { background:#fff; border:1px solid var(--border); border-radius:5px; padding:10px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
-.fmt-btn.on { background:rgba(41,98,255,.07); border-color:var(--accent); color:var(--accent); }
-
-.quality-row { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; }
-.quality-btn { background:#fff; border:1px solid var(--border); border-radius:5px; padding:8px; font-size:11px; cursor:pointer; font-family:inherit; }
-.quality-btn.on { background:rgba(34,197,94,.08); border-color:var(--success); color:#15803d; }
-
-.invert-toggle { background:#fff; border:1px solid var(--border); border-radius:6px; padding:10px; font-size:12px; cursor:pointer; font-family:inherit; text-align:center; transition:all .2s; }
-.invert-toggle.on { background:rgba(245,158,11,.1); border-color:#f59e0b; color:#b45309; }
-
-/* ACTION BUTTONS */
-.action-buttons { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:8px; }
-.action-btn { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:12px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }
-.action-btn:hover { background:var(--accent-h); }
-.action-btn.secondary { background:transparent; border:1px solid var(--border); color:var(--muted); }
-
-/* INFO BAR */
-.info-bar { background:#f8f8f8; border-radius:8px; padding:8px 10px; display:flex; justify-content:space-between; align-items:center; font-size:11px; }
-.fbar { flex:1; }
-.fname { color:var(--text); font-weight:500; }
-.fmeta { color:var(--muted); margin-left:4px; }
-.chbtn { background:transparent; border:1px solid var(--border); border-radius:4px; padding:4px 8px; font-size:10px; cursor:pointer; color:var(--muted); font-family:inherit; }
-
-/* PROGRESS */
-#stateProgress { display:none; flex-direction:column; align-items:center; justify-content:center; flex:1; padding:30px 20px; }
-.pbox { background:#fff; border-radius:14px; padding:28px 32px; text-align:center; max-width:320px; width:90%; box-shadow:0 4px 20px rgba(0,0,0,.08); }
-.spinner { width:40px; height:40px; border:3px solid #e5e7eb; border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 12px; }
-@keyframes spin { to { transform:rotate(360deg); } }
-.ptitle { font-size:15px; font-weight:600; margin-bottom:4px; }
-.psub { font-size:12px; color:var(--muted); margin-bottom:12px; }
-.pbar { height:5px; background:#e5e7eb; border-radius:3px; overflow:hidden; margin-bottom:4px; }
-.pfill { height:100%; background:var(--accent); transition:width .3s; width:0%; }
-.ppct { font-size:12px; color:var(--muted); }
-
-/* RESULT */
-#stateResult { display:none; flex-direction:column; align-items:center; justify-content:center; flex:1; padding:30px 20px; }
-.rbox { background:#fff; border-radius:14px; padding:28px 32px; text-align:center; max-width:320px; width:90%; box-shadow:0 4px 20px rgba(0,0,0,.08); }
-.ric { font-size:40px; margin-bottom:8px; }
-.rtitle { font-size:17px; font-weight:700; color:var(--success); margin-bottom:4px; }
-.rmeta { font-size:12px; color:var(--muted); margin-bottom:16px; }
-.dlbtn { width:100%; border:none; border-radius:6px; padding:11px; color:#fff; font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; margin-bottom:6px; display:flex; align-items:center; justify-content:center; gap:5px; }
-.dlbtn:disabled { opacity:.6; cursor:not-allowed; }
-.newbtn { width:100%; background:transparent; border:1px solid var(--border); border-radius:6px; padding:8px; color:var(--muted); font-size:12px; font-family:inherit; cursor:pointer; }
-
-/* ERROR */
-.errtoast { position:fixed; bottom:16px; left:50%; transform:translateX(-50%); background:#fef2f2; border:1px solid #fca5a5; color:var(--danger); border-radius:8px; padding:8px 14px; font-size:12px; z-index:2000; display:none; max-width:90vw; text-align:center; }
-.errtoast.show { display:block; }
-
-/* MERGE */
+/* MERGE SCREEN */
 #stateMerge { display:none; flex:1; flex-direction:column; overflow-y:auto; padding:16px; max-width:540px; margin:0 auto; width:100%; }
 .merge-title { font-size:18px; font-weight:700; margin-bottom:14px; text-align:center; }
 .merge-slots { display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
-.merge-slot { border:2px dashed var(--border); border-radius:12px; padding:18px; text-align:center; cursor:pointer; position:relative; transition:all .2s; }
+.merge-slot { border:2px dashed var(--border); border-radius:12px; padding:18px; text-align:center; cursor:pointer; transition:all .2s; position:relative; }
 .merge-slot:hover { border-color:var(--accent); }
-.merge-slot.has-file { border-style:solid; border-color:var(--success); background:rgba(34,197,94,.04); }
+.merge-slot.has-file { border-style:solid; border-color:#22c55e; background:rgba(34,197,94,.04); }
 .merge-slot .ms-num { font-size:22px; margin-bottom:4px; }
 .merge-slot .ms-label { font-size:13px; font-weight:500; }
 .merge-slot .ms-info { font-size:11px; color:var(--muted); margin-top:4px; }
-.merge-slot .ms-remove { position:absolute; top:8px; right:8px; background:var(--danger); color:#fff; border:none; border-radius:50%; width:22px; height:22px; font-size:12px; cursor:pointer; display:none; align-items:center; justify-content:center; }
+.merge-slot .ms-remove { position:absolute; top:8px; right:8px; background:#ef4444; color:#fff; border:none; border-radius:50%; width:22px; height:22px; font-size:12px; cursor:pointer; display:none; align-items:center; justify-content:center; }
 .merge-slot.has-file .ms-remove { display:flex; }
-.merge-swap { align-self:center; background:#f3f4f6; border:1px solid var(--border); border-radius:6px; padding:6px 16px; font-size:12px; font-weight:500; cursor:pointer; font-family:inherit; margin:-4px 0; }
+.merge-swap { align-self:center; background:#f3f4f6; border:1px solid var(--border); border-radius:6px; padding:6px 16px; font-size:12px; font-weight:500; cursor:pointer; font-family:inherit; margin:-4px 0; z-index:1; }
+.merge-swap:hover { border-color:var(--accent); }
 .merge-fmt { display:flex; gap:6px; margin-bottom:14px; }
 .merge-fmt .mfbtn { flex:1; background:#f9fafb; border:1px solid var(--border); border-radius:5px; padding:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
 .merge-fmt .mfbtn.on { background:rgba(41,98,255,.07); border-color:var(--accent); color:var(--accent); }
@@ -214,19 +232,20 @@ body {
 </div>
 
 <!-- UPLOAD -->
-<div id="stateUpload">
+<div id="stateUpload" style="display:none">
   <div class="app-title">
     <h1>Обрезать видео</h1>
-    <h2>Всё обрабатывается в браузере — файл не покидает устройство</h2>
+    <h2>Обрезать или вырезать фрагмент из видео любого формата</h2>
   </div>
   <div class="upload-area" id="uploadArea">
-    <div style="font-size:42px;margin-bottom:4px">🎬</div>
-    <div style="font-size:14px;font-weight:500;margin-bottom:4px">Выберите видео</div>
+    <div style="font-size:50px;margin-bottom:6px">🎬</div>
+    <div style="font-size:15px;font-weight:500;margin-bottom:6px">Выберите файл</div>
+    <div style="font-size:13px;color:#6b7280">Всё обрабатывается прямо в браузере — файл не покидает устройство</div>
     <button class="upload-btn" id="btnOpen">📁 Выбрать файл</button>
-    <div class="drop-hint">или перетащите сюда</div>
+    <div class="drop-hint">или перетащите файл сюда</div>
     <div class="fmt-tags">
-      <span class="fmt-tag">MP4</span><span class="fmt-tag">MOV</span><span class="fmt-tag">WEBM</span>
-      <span class="fmt-tag">AVI</span><span class="fmt-tag">MKV</span>
+      <span class="fmt-tag">MP4</span><span class="fmt-tag">MOV</span><span class="fmt-tag">AVI</span>
+      <span class="fmt-tag">MKV</span><span class="fmt-tag">WEBM</span><span class="fmt-tag">3GP</span>
     </div>
     <input type="file" id="fileInput" accept="video/*">
   </div>
@@ -234,110 +253,115 @@ body {
 
 <!-- EDITOR -->
 <div id="stateEditor">
-  <div class="editor-top">
+  <div class="toolbar">
+    <button class="tool-tab active" data-tool="cut">✂️ Обрезка</button>
+    <button class="tool-tab" data-tool="rotate">🔄 Повернуть</button>
+    <div class="tsep"></div>
+    <button class="tool-tab" data-tool="speed">⚡ Скорость</button>
+    <button class="tool-tab" data-tool="format">📦 Формат</button>
+    <div class="tr">
+      <button class="tbtn" id="btnReset">Сбросить</button>
+    </div>
+  </div>
+
+  <div class="ebody">
     <div class="vwrap">
       <video id="videoEl" preload="metadata" playsinline></video>
       <button class="play-ov" id="btnPlayOv">▶</button>
     </div>
+    <div class="side">
+      <!-- cut -->
+      <div id="panelCut">
+        <div class="stitle">✂️ Обрезка</div>
+        <p style="font-size:11px;color:#6b7280;line-height:1.6">Перетащите маркеры на таймлайне чтобы выбрать нужный фрагмент.</p>
+      </div>
+      <!-- rotate -->
+      <div id="panelRotate" style="display:none">
+        <div class="stitle">🔄 Поворот и отражение</div>
+        <div class="tfgrid">
+          <button class="tfbtn" id="btnR90"><span class="ic">↻</span><span class="lb">90°</span></button>
+          <button class="tfbtn" id="btnR180"><span class="ic">↺</span><span class="lb">180°</span></button>
+          <button class="tfbtn" id="btnFlipH"><span class="ic">⇔</span><span class="lb">Горизонталь</span></button>
+          <button class="tfbtn" id="btnFlipV"><span class="ic">⇕</span><span class="lb">Вертикаль</span></button>
+        </div>
+      </div>
+      <!-- speed -->
+      <div id="panelSpeed" style="display:none">
+        <div class="stitle">⚡ Скорость</div>
+        <div class="spgrid">
+          <button class="spbtn" data-sp="0.5">0.5×</button>
+          <button class="spbtn" data-sp="0.75">0.75×</button>
+          <button class="spbtn on" data-sp="1">1×</button>
+          <button class="spbtn" data-sp="1.5">1.5×</button>
+          <button class="spbtn" data-sp="2">2×</button>
+        </div>
+      </div>
+      <!-- format -->
+      <div id="panelFormat" style="display:none">
+        <div class="stitle">📦 Формат</div>
+        <div class="fmgrid">
+          <button class="fmbtn on" data-fmt="mp4">MP4</button>
+          <button class="fmbtn" data-fmt="webm">WEBM</button>
+          <button class="fmbtn" data-fmt="mov">MOV</button>
+          <button class="fmbtn" data-fmt="gif">GIF</button>
+        </div>
+        <div class="stitle" style="margin-top:10px">🎨 Качество</div>
+        <div class="qlrow">
+          <button class="qlbtn" data-q="low">Низкое</button>
+          <button class="qlbtn on" data-q="medium">Среднее</button>
+          <button class="qlbtn" data-q="high">Высокое</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-    <div class="info-bar">
-      <div class="fbar"><span class="fname" id="infoName">—</span><span class="fmeta" id="infoMeta">—</span></div>
+  <div class="bnav">
+    <div class="fbar">
+      <span class="fname" id="infoName">—</span>
+      <span class="fmeta" id="infoMeta">—</span>
       <button class="chbtn" id="btnChange">Сменить</button>
     </div>
-
-    <div class="tl-section">
-      <div class="tl-label">⏱️ Таймлайн</div>
-      <div class="sb" id="sb">
-        <div class="sbframes" id="sbFrames"></div>
-        <div class="sbov">
-          <div class="sbmask" id="sbML" style="left:0"></div>
-          <div class="sbmask" id="sbMR" style="right:0"></div>
-          <div class="sbsel" id="sbSel"></div>
-          <div class="sbh sbhl" id="sbHL"><div class="sbhbar"></div></div>
-          <div class="sbh sbhr" id="sbHR"><div class="sbhbar"></div></div>
-          <div class="sbph" id="sbPH"></div>
-          <div class="sbhint" id="sbHint"></div>
-        </div>
-      </div>
-      <div class="tl-controls">
-        <button class="pbtn" id="btnPlay">▶</button>
-        <div class="time-display">
-          <div class="tstepper">
-            <input class="tinp" id="m1" value="00" maxlength="2"><span class="tsep2">:</span>
-            <input class="tinp" id="s1" value="00" maxlength="2"><span class="tsep2">.</span>
-            <input class="tinp" id="f1" value="0" maxlength="1" style="width:14px">
-          </div>
-          <div class="dash">—</div>
-          <div class="tstepper">
-            <input class="tinp" id="m2" value="00" maxlength="2"><span class="tsep2">:</span>
-            <input class="tinp" id="s2" value="00" maxlength="2"><span class="tsep2">.</span>
-            <input class="tinp" id="f2" value="0" maxlength="1" style="width:14px">
-          </div>
-        </div>
-        <div class="dur-badge" id="durb">0:00</div>
+    <!-- Storyboard -->
+    <div class="sb" id="sb">
+      <div class="sbframes" id="sbFrames"></div>
+      <div class="sbov">
+        <div class="sbmask" id="sbML" style="left:0"></div>
+        <div class="sbmask" id="sbMR" style="right:0"></div>
+        <div class="sbsel" id="sbSel"></div>
+        <div class="sbh sbhl" id="sbHL"><div class="sbhbar"></div></div>
+        <div class="sbh sbhr" id="sbHR"><div class="sbhbar"></div></div>
+        <div class="sbph" id="sbPH"></div>
+        <div class="sbhint" id="sbHint"></div>
       </div>
     </div>
-
-    <div class="tools-panel">
-      <div class="tools-header">
-        <button class="tool-btn on" data-tool="cut">✂️ Обрезка</button>
-        <button class="tool-btn" data-tool="rotate">🔄 Поворот</button>
-        <button class="tool-btn" data-tool="speed">⚡ Скорость</button>
-        <button class="tool-btn" data-tool="format">📦 Формат</button>
+    <!-- Controls row -->
+    <div class="crow">
+      <button class="pbtn" id="btnPlay">▶</button>
+      <div class="tstepper">
+        <input class="tinp" id="m1" value="00" maxlength="2">
+        <span class="tsep2">:</span>
+        <input class="tinp" id="s1" value="00" maxlength="2">
+        <span class="tsep2">.</span>
+        <input class="tinp" id="f1" value="0" maxlength="1" style="width:14px">
       </div>
-
-      <!-- CUT -->
-      <div class="tool-content active" id="panelCut">
-        <div style="font-size:12px;color:#6b7280;line-height:1.5">Перетащите маркеры на таймлайне для выбора фрагмента.</div>
-        <div style="margin-top:8px;display:flex;gap:6px">
-          <button class="invert-toggle" id="btnInvert" style="flex:1">⇄ Вырезать (оставить снаружи)</button>
-          <button class="action-btn secondary" id="btnReset" style="flex:1">Сбросить</button>
-        </div>
+      <span class="dash">—</span>
+      <div class="tstepper">
+        <input class="tinp" id="m2" value="00" maxlength="2">
+        <span class="tsep2">:</span>
+        <input class="tinp" id="s2" value="00" maxlength="2">
+        <span class="tsep2">.</span>
+        <input class="tinp" id="f2" value="0" maxlength="1" style="width:14px">
       </div>
-
-      <!-- ROTATE -->
-      <div class="tool-content" id="panelRotate">
-        <div class="grid-2">
-          <button class="grid-btn" id="btnR90"><span class="icon">↻</span>90°</button>
-          <button class="grid-btn" id="btnR180"><span class="icon">↺</span>180°</button>
-          <button class="grid-btn" id="btnFlipH"><span class="icon">⇔</span>Гориз.</button>
-          <button class="grid-btn" id="btnFlipV"><span class="icon">⇕</span>Верт.</button>
-        </div>
-      </div>
-
-      <!-- SPEED -->
-      <div class="tool-content" id="panelSpeed">
-        <div class="speed-grid">
-          <button class="speed-btn" data-sp="0.5">0.5×</button>
-          <button class="speed-btn" data-sp="0.75">0.75×</button>
-          <button class="speed-btn on" data-sp="1">1×</button>
-          <button class="speed-btn" data-sp="1.5">1.5×</button>
-          <button class="speed-btn" data-sp="2">2×</button>
-        </div>
-      </div>
-
-      <!-- FORMAT -->
-      <div class="tool-content" id="panelFormat">
-        <div style="font-size:11px;color:#6b7280;margin-bottom:8px">Формат и качество</div>
-        <div class="fmt-grid">
-          <button class="fmt-btn on" data-fmt="mp4">MP4</button>
-          <button class="fmt-btn" data-fmt="webm">WEBM</button>
-        </div>
-        <div style="font-size:11px;color:#6b7280;margin-bottom:6px">Качество</div>
-        <div class="quality-row">
-          <button class="quality-btn" data-q="low">Низкое</button>
-          <button class="quality-btn on" data-q="medium">Среднее</button>
-          <button class="quality-btn" data-q="high">Высокое</button>
-        </div>
+      <button class="invbtn" id="btnInvert">⇄ Вырезать</button>
+      <span class="durb" id="durb">0:00</span>
+      <div style="margin-left:auto">
+        <button class="savebtn" id="btnSave">Сохранить</button>
       </div>
     </div>
-  </div>
-
-  <div class="action-buttons">
-    <button class="action-btn" id="btnSave">✂️ Сохранить</button>
-    <button class="action-btn secondary" id="btnCancel">Отмена</button>
   </div>
 </div>
+
+
 
 <!-- PROGRESS -->
 <div id="stateProgress">
@@ -357,10 +381,12 @@ body {
     <div class="rtitle">Готово!</div>
     <div class="rmeta" id="rmeta">—</div>
     <button class="dlbtn" id="btnSendTg" style="background:#229ED9">📤 Отправить в Telegram</button>
-    <button class="dlbtn" id="btnDl" style="background:var(--success)">⬇️ Скачать</button>
-    <button class="newbtn" id="btnNew">+ Начать заново</button>
+    <button class="dlbtn" id="btnDl">⬇️ Скачать видео</button>
+    <button class="newbtn" id="btnNew">+ Обрезать другое видео</button>
   </div>
 </div>
+
+<div class="errtoast" id="errToast"></div>
 
 <!-- MERGE -->
 <div id="stateMerge">
@@ -385,58 +411,54 @@ body {
     <button class="mfbtn" data-mfmt="webm">WEBM</button>
   </div>
   <button class="merge-go" id="btnMerge" disabled>🔗 Склеить видео</button>
-  <input type="file" id="mergeInput1" accept="video/*">
-  <input type="file" id="mergeInput2" accept="video/*">
+  <input type="file" id="mergeInput1" accept="video/*" style="display:none">
+  <input type="file" id="mergeInput2" accept="video/*" style="display:none">
 </div>
 
-<div class="errtoast" id="errToast"></div>
-
 <script>
-const G = id => document.getElementById(id);
-const su = G('stateUpload'), se = G('stateEditor');
-const sp = G('stateProgress'), sr = G('stateResult');
-const stHome = G('stateHome'), stMerge = G('stateMerge');
-const fInp = G('fileInput'), videoEl = G('videoEl');
-const sbEl = G('sb'), sbFrames = G('sbFrames');
-const sbML = G('sbML'), sbMR = G('sbMR'), sbSel = G('sbSel');
-const sbHL = G('sbHL'), sbHR = G('sbHR'), sbPH = G('sbPH'), sbHint = G('sbHint');
-const m1=G('m1'),s1=G('s1'),f1=G('f1'),m2=G('m2'),s2=G('s2'),f2=G('f2');
+// Без FFmpeg — используем MediaRecorder + Canvas API
 
+// ── Telegram viewport height (правильная высота под смартфон) ──
+(function() {
+  const tg = window.Telegram?.WebApp;
+  function applyHeight() {
+    let h = window.innerHeight;
+    if (tg && tg.viewportStableHeight) h = tg.viewportStableHeight;
+    else if (tg && tg.viewportHeight) h = tg.viewportHeight;
+    document.documentElement.style.setProperty('--app-h', h + 'px');
+  }
+  applyHeight();
+  if (tg) {
+    tg.onEvent('viewportChanged', applyHeight);
+  }
+  window.addEventListener('resize', applyHeight);
+})();
+
+// ── STATE ──
 let videoFile = null, videoDur = 0;
 let startTime = 0, endTime = 0;
 let rotAngle = 0, rotation = 0, flipH = false, flipV = false;
 let speed = 1, format = 'mp4', quality = 'medium', invert = false;
 let outBlob = null, dragging = null;
-let mFile1 = null, mFile2 = null, mFormat = 'mp4';
 
+// ── DOM ──
+const G = id => document.getElementById(id);
+const su=G('stateUpload'), se=G('stateEditor');
+const sp=G('stateProgress'), sr=G('stateResult');
+const fInp=G('fileInput'), videoEl=G('videoEl');
+const sbEl=G('sb'), sbFrames=G('sbFrames');
+const sbML=G('sbML'), sbMR=G('sbMR'), sbSel=G('sbSel');
+const sbHL=G('sbHL'), sbHR=G('sbHR'), sbPH=G('sbPH'), sbHint=G('sbHint');
+const m1=G('m1'),s1=G('s1'),f1=G('f1'), m2=G('m2'),s2=G('s2'),f2=G('f2');
+
+// ── UTILS ──
 const fmtT = s => `${Math.floor(Math.max(0,s)/60)}:${String(Math.floor(Math.max(0,s)%60)).padStart(2,'0')}`;
-const fmtSz = b => b<1048576?(b/1024).toFixed(1)+' КБ':(b/1048576).toFixed(1)+' МБ';
+const fmtFF = s => { const m=Math.floor(s/60),sec=(s%60).toFixed(2); return `${String(m).padStart(2,'0')}:${String(sec).padStart(5,'0')}`; };
+const fmtSz = b => b<1048576 ? (b/1024).toFixed(1)+' КБ' : (b/1048576).toFixed(1)+' МБ';
 const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 const showErr = msg => { const t=G('errToast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),4000); };
 
-function hideAllStates() {
-  [stHome,su,se,sp,sr,stMerge].forEach(el=>el.style.display='none');
-}
-function showBack(show) { G('btnBack').style.display = show ? 'block' : 'none'; }
-
-function goHome() {
-  hideAllStates();
-  stHome.style.display='flex';
-  showBack(false);
-  fInp.value=''; videoFile=null; outBlob=null; videoEl.src=''; sbFrames.innerHTML='';
-  mFile1=null; mFile2=null;
-  G('mergeInput1').value=''; G('mergeInput2').value='';
-  updateMergeUI();
-}
-
-G('modeCut').onclick = () => { hideAllStates(); su.style.display=''; showBack(true); };
-G('modeMerge').onclick = () => { hideAllStates(); stMerge.style.display='flex'; stMerge.style.flexDirection='column'; showBack(true); };
-G('btnBack').onclick = goHome;
-G('logoHome').onclick = e => { e.preventDefault(); goHome(); };
-G('btnNew').onclick = goHome;
-G('btnChange').onclick = () => { hideAllStates(); su.style.display=''; };
-G('btnCancel').onclick = () => { hideAllStates(); su.style.display=''; fInp.value=''; videoFile=null; videoEl.src=''; sbFrames.innerHTML=''; };
-
+// ── UPLOAD ──
 G('btnOpen').onclick = () => fInp.click();
 G('uploadArea').onclick = e => { if(e.target!==G('btnOpen')) fInp.click(); };
 fInp.onchange = () => { if(fInp.files[0]) loadFile(fInp.files[0]); };
@@ -445,57 +467,90 @@ G('uploadArea').ondragleave = () => G('uploadArea').classList.remove('drag');
 G('uploadArea').ondrop = e => { e.preventDefault(); G('uploadArea').classList.remove('drag'); if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); };
 
 function loadFile(f) {
-  if (!f.type.startsWith('video/') && !/\.(mp4|mov|avi|mkv|webm|3gp)$/i.test(f.name)) return showErr('Выберите видео');
+  if (!f.type.startsWith('video/') && !/\.(mp4|mov|avi|mkv|webm|3gp|flv|wmv|m4v)$/i.test(f.name))
+    return showErr('Выберите видео файл');
   videoFile = f;
+  // Показываем превью сразу — БЕЗ загрузки на сервер
   videoEl.src = URL.createObjectURL(f);
   videoEl.onloadedmetadata = () => {
-    videoDur = videoEl.duration; startTime = 0; endTime = videoDur;
+    videoDur = videoEl.duration;
+    startTime = 0; endTime = videoDur;
     G('infoName').textContent = f.name;
-    G('infoMeta').textContent = fmtSz(f.size)+' · '+fmtT(videoDur);
+    G('infoMeta').textContent = fmtSz(f.size) + ' · ' + fmtT(videoDur);
     updateTI(); updateSB(); generateFrames();
-    hideAllStates(); se.style.display='flex'; se.style.flexDirection='column';
+    su.style.display = 'none';
+    se.style.display = 'flex';
+    se.style.flexDirection = 'column';
   };
 }
 
-// Tool tabs
-document.querySelectorAll('.tool-btn').forEach(b => b.onclick = () => {
-  document.querySelectorAll('.tool-btn').forEach(x=>x.classList.remove('on'));
-  document.querySelectorAll('.tool-content').forEach(x=>x.classList.remove('active'));
-  b.classList.add('on');
-  G('panel'+b.dataset.tool.charAt(0).toUpperCase()+b.dataset.tool.slice(1)).classList.add('active');
+// ── TOOL TABS ──
+const panels = { cut:'panelCut', rotate:'panelRotate', speed:'panelSpeed', format:'panelFormat' };
+document.querySelectorAll('.tool-tab').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tool-tab').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  Object.entries(panels).forEach(([k,v]) => G(v).style.display = k===b.dataset.tool?'':'none');
 });
 
-// Play
+// ── PLAY ──
 const togglePlay = () => {
-  if(videoEl.paused) { if(videoEl.currentTime<startTime||videoEl.currentTime>=endTime) videoEl.currentTime=startTime; videoEl.play(); G('btnPlay').textContent='⏸'; G('btnPlayOv').textContent='⏸'; }
-  else { videoEl.pause(); G('btnPlay').textContent='▶'; G('btnPlayOv').textContent='▶'; }
+  if (videoEl.paused) {
+    if (videoEl.currentTime<startTime||videoEl.currentTime>=endTime) videoEl.currentTime=startTime;
+    videoEl.play(); G('btnPlay').textContent='⏸'; G('btnPlayOv').textContent='⏸';
+  } else {
+    videoEl.pause(); G('btnPlay').textContent='▶'; G('btnPlayOv').textContent='▶';
+  }
 };
 G('btnPlay').onclick = G('btnPlayOv').onclick = togglePlay;
-videoEl.ontimeupdate = () => { if(videoEl.currentTime>=endTime){videoEl.pause();videoEl.currentTime=endTime;G('btnPlay').textContent='▶';G('btnPlayOv').textContent='▶';} updatePH(); };
+videoEl.ontimeupdate = () => {
+  if (videoEl.currentTime>=endTime) { videoEl.pause(); videoEl.currentTime=endTime; G('btnPlay').textContent='▶'; G('btnPlayOv').textContent='▶'; }
+  updatePH();
+};
 
-// Transforms
-G('btnR90').onclick = () => { rotAngle=(rotAngle+90)%360; rotation=rotAngle; updTF(); updRB(); };
-G('btnR180').onclick = () => { rotAngle=(rotAngle+180)%360; rotation=rotAngle; updTF(); updRB(); };
+// ── TRANSFORMS ──
+G('btnR90').onclick = () => { rotAngle=(rotAngle+90)%360; rotation=rotAngle; updTF(); updRotBtns(); };
+G('btnR180').onclick = () => { rotAngle=(rotAngle+180)%360; rotation=rotAngle; updTF(); updRotBtns(); };
 G('btnFlipH').onclick = () => { flipH=!flipH; G('btnFlipH').classList.toggle('on',flipH); updTF(); };
 G('btnFlipV').onclick = () => { flipV=!flipV; G('btnFlipV').classList.toggle('on',flipV); updTF(); };
 function updTF() { let t=`rotate(${rotAngle}deg)`; if(flipH)t+=' scaleX(-1)'; if(flipV)t+=' scaleY(-1)'; videoEl.style.transform=t; }
-function updRB() { G('btnR90').classList.toggle('on',rotAngle!==0); G('btnR180').classList.toggle('on',rotAngle===180||rotAngle===270); }
+function updRotBtns() { G('btnR90').classList.toggle('on',rotAngle!==0); G('btnR180').classList.toggle('on',rotAngle===180||rotAngle===270); }
 
-document.querySelectorAll('.speed-btn').forEach(b=>b.onclick=()=>{document.querySelectorAll('.speed-btn').forEach(x=>x.classList.remove('on'));b.classList.add('on');speed=parseFloat(b.dataset.sp);videoEl.playbackRate=speed;});
-document.querySelectorAll('[data-fmt]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-fmt]').forEach(x=>x.classList.remove('on'));b.classList.add('on');format=b.dataset.fmt;});
-document.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-q]').forEach(x=>x.classList.remove('on'));b.classList.add('on');quality=b.dataset.q;});
+// ── SPEED ──
+document.querySelectorAll('.spbtn').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.spbtn').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); speed=parseFloat(b.dataset.sp); videoEl.playbackRate=speed;
+});
+
+// ── FORMAT / QUALITY ──
+document.querySelectorAll('.fmbtn').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.fmbtn').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); format=b.dataset.fmt;
+});
+document.querySelectorAll('.qlbtn').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.qlbtn').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); quality=b.dataset.q;
+});
+
+// ── INVERT / RESET ──
 G('btnInvert').onclick = () => { invert=!invert; G('btnInvert').classList.toggle('on',invert); };
-G('btnReset').onclick = () => {
+G('btnReset').onclick = resetAll;
+G('btnChange').onclick = () => {
+  se.style.display='none'; su.style.display='';
+  fInp.value=''; videoFile=null; videoEl.src=''; sbFrames.innerHTML='';
+};
+function resetAll() {
   startTime=0; endTime=videoDur; rotAngle=0; rotation=0; flipH=false; flipV=false;
   speed=1; format='mp4'; quality='medium'; invert=false;
-  document.querySelectorAll('.speed-btn').forEach(b=>b.classList.toggle('on',b.dataset.sp==='1'));
-  document.querySelectorAll('[data-fmt]').forEach(b=>b.classList.toggle('on',b.dataset.fmt==='mp4'));
-  document.querySelectorAll('[data-q]').forEach(b=>b.classList.toggle('on',b.dataset.q==='medium'));
-  G('btnInvert').classList.remove('on'); videoEl.style.transform=''; videoEl.playbackRate=1;
+  document.querySelectorAll('.tfbtn').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.spbtn').forEach(b=>b.classList.toggle('on',b.dataset.sp==='1'));
+  document.querySelectorAll('.fmbtn').forEach(b=>b.classList.toggle('on',b.dataset.fmt==='mp4'));
+  document.querySelectorAll('.qlbtn').forEach(b=>b.classList.toggle('on',b.dataset.q==='medium'));
+  G('btnInvert').classList.remove('on');
+  videoEl.style.transform=''; videoEl.playbackRate=1;
   updateTI(); updateSB();
-};
+}
 
-// Time inputs
+// ── TIME INPUTS ──
 const readT = (m,s,f) => (parseInt(m.value)||0)*60+(parseInt(s.value)||0)+(parseInt(f.value)||0)*.1;
 function updateTI() {
   m1.value=String(Math.floor(startTime/60)).padStart(2,'0');
@@ -506,104 +561,159 @@ function updateTI() {
   f2.value=String(Math.floor((endTime%1)*10));
   G('durb').textContent=fmtT(Math.max(0,endTime-startTime));
 }
-[m1,s1,f1].forEach(i=>i.oninput=()=>{startTime=clamp(readT(m1,s1,f1),0,endTime-.1);updateSB();videoEl.currentTime=startTime;});
-[m2,s2,f2].forEach(i=>i.oninput=()=>{endTime=clamp(readT(m2,s2,f2),startTime+.1,videoDur);updateSB();videoEl.currentTime=endTime;updateTI();});
+[m1,s1,f1].forEach(i=>i.oninput=()=>{ startTime=clamp(readT(m1,s1,f1),0,endTime-.1); updateSB(); videoEl.currentTime=startTime; });
+[m2,s2,f2].forEach(i=>i.oninput=()=>{ endTime=clamp(readT(m2,s2,f2),startTime+.1,videoDur); updateSB(); videoEl.currentTime=endTime; updateTI(); });
 
-// Storyboard
-function updateSB() { if(!videoDur) return; const l=(startTime/videoDur)*100,r=(endTime/videoDur)*100; sbML.style.width=l+'%'; sbMR.style.width=(100-r)+'%'; sbSel.style.left=l+'%'; sbSel.style.right=(100-r)+'%'; updateTI(); }
+// ── STORYBOARD ──
+function updateSB() {
+  if(!videoDur) return;
+  const l=(startTime/videoDur)*100, r=(endTime/videoDur)*100;
+  sbML.style.width=l+'%';
+  sbMR.style.width=(100-r)+'%';
+  sbSel.style.left=l+'%'; sbSel.style.right=(100-r)+'%';
+  updateTI();
+}
 function updatePH() { if(!videoDur) return; sbPH.style.left=(videoEl.currentTime/videoDur)*100+'%'; }
+
 async function generateFrames() {
   if(!videoDur) return;
-  const W=sbEl.offsetWidth||400,H=sbEl.offsetHeight||48,n=Math.max(4,Math.floor(W/28));
+  const W=sbEl.offsetWidth||400, H=sbEl.offsetHeight||54;
+  const n=Math.max(4,Math.floor(W/28));
   sbFrames.innerHTML='';
-  const fw=Math.floor(W/n),divs=[];
-  for(let i=0;i<n;i++){const d=document.createElement('div');d.className='sbframe ld';d.style.width=fw+'px';sbFrames.appendChild(d);divs.push(d);}
-  const cv=document.createElement('canvas');cv.width=Math.round(fw*1.6);cv.height=Math.round(H*1.6);const ctx=cv.getContext('2d');
+  const fw=Math.floor(W/n), divs=[];
+  for(let i=0;i<n;i++) { const d=document.createElement('div'); d.className='sbframe ld'; d.style.width=fw+'px'; sbFrames.appendChild(d); divs.push(d); }
+  const cv=document.createElement('canvas'); cv.width=Math.round(fw*1.6); cv.height=Math.round(H*1.6);
+  const ctx=cv.getContext('2d');
+  // Запоминаем текущее время и состояние, чтобы вернуть после генерации
+  const wasPaused = videoEl.paused;
+  const savedTime = videoEl.currentTime;
   videoEl.pause();
-  for(let i=0;i<n;i++){
+  for(let i=0;i<n;i++) {
     const t=(i/Math.max(1,n-1))*videoDur;
-    try{await new Promise(r=>{videoEl.currentTime=t;const h=()=>{videoEl.removeEventListener('seeked',h);r();};videoEl.addEventListener('seeked',h);});
-    ctx.drawImage(videoEl,0,0,cv.width,cv.height);const img=document.createElement('img');img.src=cv.toDataURL('image/jpeg',.6);divs[i].innerHTML='';divs[i].appendChild(img);divs[i].classList.remove('ld');}catch(e){}
+    try {
+      await new Promise(res=>{ videoEl.currentTime=t; const h=()=>{ videoEl.removeEventListener('seeked',h); res(); }; videoEl.addEventListener('seeked',h); });
+      ctx.drawImage(videoEl,0,0,cv.width,cv.height);
+      const img=document.createElement('img'); img.src=cv.toDataURL('image/jpeg',.6);
+      divs[i].innerHTML=''; divs[i].appendChild(img); divs[i].classList.remove('ld');
+    } catch(e) {}
   }
-  videoEl.currentTime=startTime; updatePH();
+  // Возвращаем на начало выбранного фрагмента, НЕ запускаем воспроизведение
+  videoEl.currentTime = startTime;
+  updatePH();
 }
 
+// SB drag — определяем ручку по близости к позиции start/end, не по elementFromPoint
 function sbOnStart(e) {
-  if(e.button!==undefined&&e.button!==0) return;
-  const t=e.touches?.[0],cx=t?t.clientX:e.clientX,rect=sbEl.getBoundingClientRect(),x=cx-rect.left,w=rect.width;
-  const posS=(startTime/videoDur)*w,posE=(endTime/videoDur)*w,TH=28,dS=Math.abs(x-posS),dE=Math.abs(x-posE);
-  if(dS<=TH||dE<=TH){dragging=(dS<=dE)?'s':'e';e.preventDefault();e.stopPropagation();}
-  else{videoEl.currentTime=clamp((x/w)*videoDur,0,videoDur);updatePH();}
+  if(e.button !== undefined && e.button !== 0) return; // только левая кнопка мыши
+  const touch = e.touches?.[0];
+  const clientX = touch ? touch.clientX : e.clientX;
+  const rect = sbEl.getBoundingClientRect();
+  const x = clientX - rect.left;
+  const w = rect.width;
+  const posS = (startTime / videoDur) * w; // пиксельная позиция левой ручки
+  const posE = (endTime   / videoDur) * w; // пиксельная позиция правой ручки
+  const THRESH = 28; // px — зона захвата ручки
+  const dS = Math.abs(x - posS);
+  const dE = Math.abs(x - posE);
+  if (dS <= THRESH || dE <= THRESH) {
+    // хватаем ближайшую ручку
+    dragging = (dS <= dE) ? 's' : 'e';
+    e.preventDefault();
+    e.stopPropagation();
+  } else {
+    // клик по таймлайну — перемещаем playhead
+    videoEl.currentTime = clamp((x / w) * videoDur, 0, videoDur);
+    updatePH();
+  }
 }
-sbEl.addEventListener('mousedown',sbOnStart);
-sbEl.addEventListener('touchstart',sbOnStart,{passive:false});
-const onMv=e=>{if(!dragging)return;e.preventDefault();const t=e.touches?.[0],rect=sbEl.getBoundingClientRect(),x=(t?t.clientX:e.clientX)-rect.left,p=clamp(x/rect.width,0,1),tm=p*videoDur;if(dragging==='s'){startTime=clamp(tm,0,endTime-.1);videoEl.currentTime=startTime;}else{endTime=clamp(tm,startTime+.1,videoDur);videoEl.currentTime=endTime;}updateSB();sbHint.style.left=(p*100)+'%';sbHint.textContent=fmtT(tm);sbHint.style.display='block';};
-const onUp=()=>{dragging=null;sbHint.style.display='none';};
-document.addEventListener('mousemove',onMv,{passive:false});
-document.addEventListener('touchmove',onMv,{passive:false});
-document.addEventListener('mouseup',onUp);
-document.addEventListener('touchend',onUp);
-document.addEventListener('touchcancel',onUp);
+sbEl.addEventListener('mousedown',  sbOnStart);
+sbEl.addEventListener('touchstart', sbOnStart, {passive: false});
 
-// SAVE - оригинальный рабочий код
-function getBestMime(fmt) {
-  const candidates = fmt === 'mp4'
-    ? ['video/mp4;codecs=avc1,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm']
-    : ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
-  return candidates.find(m => MediaRecorder.isTypeSupported(m)) || null;
-}
-function qualityBitrate() { return {low:1e6,medium:4e6,high:8e6}[quality]||4e6; }
-function waitUntil(video,targetTime,totalDur,pctFrom,pctTo) {
-  return new Promise(resolve => {
-    function check() {
-      const ratio=Math.min(1,(video.currentTime-(targetTime-totalDur))/Math.max(.01,totalDur));
-      const pct=pctFrom+ratio*(pctTo-pctFrom);
-      G('pfill').style.width=Math.min(pct,pctTo)+'%'; G('ppct').textContent=Math.round(Math.min(pct,pctTo))+'%';
-      if(video.currentTime>=targetTime-.15||video.ended) resolve(); else setTimeout(check,150);
-    } check();
-  });
-}
+const onMv = e => {
+  if (!dragging) return;
+  e.preventDefault();
+  const touch = e.touches?.[0];
+  const rect = sbEl.getBoundingClientRect();
+  const x = (touch ? touch.clientX : e.clientX) - rect.left;
+  const p = clamp(x / rect.width, 0, 1);
+  const t = p * videoDur;
+  if (dragging === 's') { startTime = clamp(t, 0, endTime - 0.1); videoEl.currentTime = startTime; }
+  else                  { endTime   = clamp(t, startTime + 0.1, videoDur); videoEl.currentTime = endTime; }
+  updateSB();
+  sbHint.style.left = (p * 100) + '%';
+  sbHint.textContent = fmtT(t);
+  sbHint.style.display = 'block';
+};
+const onUp = () => { dragging = null; sbHint.style.display = 'none'; };
+document.addEventListener('mousemove',   onMv, {passive: false});
+document.addEventListener('touchmove',   onMv, {passive: false});
+document.addEventListener('mouseup',     onUp);
+document.addEventListener('touchend',    onUp);
+document.addEventListener('touchcancel', onUp);
 
+// ── SAVE via MediaRecorder ──
 G('btnSave').onclick = async () => {
   if (!videoFile) return;
-  hideAllStates(); sp.style.display = 'flex'; sp.style.flexDirection = 'column';
+
+  // MediaRecorder не поддерживает invert-режим, поворот и скорость через seek
+  // Используем Canvas + captureStream для применения трансформаций
+
+  se.style.display = 'none'; sp.style.display = 'flex'; sp.style.flexDirection = 'column';
   G('pfill').style.width = '0%'; G('ppct').textContent = '0%';
   G('ptitle').textContent = 'Обрабатываем видео...';
   G('psub').textContent = 'Запись фрагмента в браузере';
+
   try {
     const mimeType = getBestMime(format);
-    if (!mimeType) { throw new Error('Браузер не поддерживает этот формат. Выберите WEBM или MP4.'); }
+    if (!mimeType) { throw new Error('Ваш браузер не поддерживает запись в этот формат. Выберите WEBM или MP4.'); }
+
+    // Canvas для рендеринга с трансформациями
     const cv = document.createElement('canvas');
     const ctx = cv.getContext('2d');
+
+    // Определяем размеры с учётом поворота
     const origW = videoEl.videoWidth  || 640;
     const origH = videoEl.videoHeight || 360;
     const rotated = (rotation === 90 || rotation === 270);
     cv.width  = rotated ? origH : origW;
     cv.height = rotated ? origW : origH;
+
+    // Создаём скрытый video-элемент для воспроизведения источника
     const src = document.createElement('video');
     src.src = URL.createObjectURL(videoFile);
-    src.muted = true;
+    src.muted = true; // звук отдельно через AudioContext
     src.playbackRate = speed;
     await new Promise(r => { src.onloadedmetadata = r; });
+
+    // AudioContext для захвата звука (БЕЗ вывода в колонки)
     let audioStream = null;
     try {
       const actx = new AudioContext();
       const srcNode = actx.createMediaElementSource(src);
       const dest = actx.createMediaStreamDestination();
       srcNode.connect(dest);
+      // НЕ подключаем к actx.destination — иначе звук идёт в колонки во время обработки
       audioStream = dest.stream;
-    } catch(e) { }
+    } catch(e) { /* audio может быть недоступен */ }
+
+    // Stream с canvas + audio
     const canvasStream = cv.captureStream(30);
     const tracks = [...canvasStream.getTracks(), ...(audioStream ? audioStream.getTracks() : [])];
     const combinedStream = new MediaStream(tracks);
+
     const chunks = [];
     const rec = new MediaRecorder(combinedStream, { mimeType, videoBitsPerSecond: qualityBitrate() });
     rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+
+    // Перемотка к startTime
     src.currentTime = startTime;
     await new Promise(r => { src.onseeked = r; });
+
+    // Рисуем кадры на canvas
     let rafId;
-    const segEnd = invert ? startTime : endTime;
+    const segEnd   = invert ? startTime : endTime; // для простого режима
     const totalDur = invert ? videoDur - (endTime - startTime) : (endTime - startTime);
+
     function drawFrame() {
       if (src.paused || src.ended) return;
       ctx.save();
@@ -616,40 +726,53 @@ G('btnSave').onclick = async () => {
       ctx.restore();
       rafId = requestAnimationFrame(drawFrame);
     }
+
     rec.start(100);
     src.play();
     drawFrame();
+
+    // Для инверт-режима: пишем два сегмента
     if (invert && startTime > 0 && endTime < videoDur) {
+      // Сегмент 1: 0 → startTime
       src.currentTime = 0;
       await new Promise(r => { src.onseeked = r; });
       src.play(); drawFrame();
       await waitUntil(src, startTime, totalDur, 0, 50);
       src.pause();
+
+      // Сегмент 2: endTime → videoDur
       src.currentTime = endTime;
       await new Promise(r => { src.onseeked = r; });
       src.play(); drawFrame();
       await waitUntil(src, videoDur, totalDur, 50, 100);
       src.pause();
     } else {
+      // Обычная обрезка: startTime → endTime
       await waitUntil(src, invert ? videoDur : endTime, totalDur, 0, 100);
       src.pause();
     }
+
     cancelAnimationFrame(rafId);
     rec.stop();
+
     await new Promise(r => { rec.onstop = r; });
     combinedStream.getTracks().forEach(t => t.stop());
     URL.revokeObjectURL(src.src);
+
     const ext = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('webm') ? 'webm' : 'webm';
     outBlob = new Blob(chunks, { type: mimeType });
+
     G('pfill').style.width = '100%'; G('ppct').textContent = '100%';
     setTimeout(() => {
-      hideAllStates();
+      sp.style.display = 'none';
+      se.style.display = 'none';
       sr.style.display = 'flex';
       sr.style.flexDirection = 'column';
       const tooBig = outBlob.size > 4.4 * 1024 * 1024;
       G('rmeta').textContent = `${fmtSz(outBlob.size)} · ${fmtT(totalDur / speed)} · ${ext.toUpperCase()}`;
       const sendBtn = G('btnSendTg');
       if (tooBig && tgApp) {
+        // Файл больше лимита Vercel — отправка не сработает, подсказываем скачать
         sendBtn.disabled = true;
         sendBtn.style.opacity = '0.5';
         sendBtn.textContent = '⚠️ Слишком большое для Telegram';
@@ -662,21 +785,56 @@ G('btnSave').onclick = async () => {
       }
       checkTgBtn();
     }, 300);
+
   } catch(e) {
-    hideAllStates();
+    sp.style.display = 'none';
     se.style.display = 'flex'; se.style.flexDirection = 'column';
     showErr('Ошибка: ' + e.message);
   }
 };
 
+function getBestMime(fmt) {
+  const candidates = fmt === 'mp4'
+    ? ['video/mp4;codecs=avc1,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm']
+    : ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+  return candidates.find(m => MediaRecorder.isTypeSupported(m)) || null;
+}
+
+function qualityBitrate() {
+  return { low: 1_000_000, medium: 4_000_000, high: 8_000_000 }[quality] || 4_000_000;
+}
+
+// Ждём пока видео дойдёт до targetTime, обновляя прогресс
+function waitUntil(video, targetTime, totalDur, pctFrom, pctTo) {
+  return new Promise(resolve => {
+    function check() {
+      const elapsed = Math.max(0, video.currentTime - (pctFrom === 0 ? video.currentTime : 0));
+      const ratio = Math.min(1, (video.currentTime - (targetTime - totalDur)) / Math.max(0.01, totalDur));
+      const pct = pctFrom + ratio * (pctTo - pctFrom);
+      G('pfill').style.width = Math.min(pct, pctTo) + '%';
+      G('ppct').textContent = Math.round(Math.min(pct, pctTo)) + '%';
+      if (video.currentTime >= targetTime - 0.15 || video.ended) { resolve(); }
+      else { setTimeout(check, 150); }
+    }
+    check();
+  });
+}
+
+// ── СКАЧАТЬ ──
 G('btnDl').onclick = () => {
-  if (!outBlob) { showErr('Файл не найден'); return; }
+  if (!outBlob) { showErr('Файл не найден, обработайте видео заново'); return; }
   const url = URL.createObjectURL(outBlob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = (videoFile?.name?.replace(/\.[^.]+$/, '') || 'video') + '.' + format;
+  a.download = (videoFile?.name?.replace(/\.[^.]+$/, '') || 'video') + '_cut.' + format;
   document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(url); document.body.removeChild(a); }, 1000);
+};
+
+G('btnNew').onclick = () => {
+  sr.style.display='none'; se.style.display='none'; su.style.display='';
+  fInp.value=''; videoFile=null; outBlob=null; videoEl.src=''; sbFrames.innerHTML='';
+  resetAll();
 };
 
 // Telegram
@@ -686,33 +844,45 @@ if (tgApp) {
   tgApp.ready();
   tgApp.expand();
   tgChatId = tgApp.initDataUnsafe?.user?.id || null;
+  console.log('[app] Telegram chatId:', tgChatId);
 }
+
 function checkTgBtn() {
   const btn = G('btnSendTg');
-  if (!tgApp) { btn.style.display = 'none'; }
+  if (!tgApp) { btn.style.display = 'none'; } // в браузере скрываем
 }
+
+// ── ОТПРАВИТЬ В TELEGRAM ──
 G('btnSendTg').onclick = async () => {
-  if (!outBlob) { showErr('Файл не найден'); return; }
+  if (!outBlob) { showErr('Файл не найден, обработайте видео заново'); return; }
+
+  // Vercel лимит на загрузку — 4.5MB. Проверяем заранее.
   const VERCEL_LIMIT = 4.4 * 1024 * 1024;
   if (outBlob.size > VERCEL_LIMIT) {
-    showErr(`Видео слишком большое (${fmtSz(outBlob.size)}). Лимит 4.4 МБ.`);
+    showErr(`Видео слишком большое (${fmtSz(outBlob.size)}). Лимит 4.4 МБ. Уменьшите качество, длину или выберите формат WEBM.`);
     return;
   }
+
   const btn = G('btnSendTg');
   btn.disabled = true;
   btn.textContent = '⏳ Загружаем...';
-  const fname = (videoFile?.name?.replace(/\.[^.]+$/, '') || 'video') + '.' + format;
+
+  const fname = (videoFile?.name?.replace(/\.[^.]+$/, '') || 'video') + '_cut.' + format;
+
   try {
-    hideAllStates();
+    sr.style.display = 'none';
     sp.style.display = 'flex'; sp.style.flexDirection = 'column';
     G('ptitle').textContent = 'Отправляем в Telegram...';
     G('psub').textContent = 'Загрузка видео на сервер';
     G('pfill').style.width = '0%';
     G('ppct').textContent = '0%';
+
+    // Загружаем файл + chat_id + format. Сервер сам отправит видео в Telegram.
     const fd = new FormData();
     if (tgChatId) fd.append('chat_id', String(tgChatId));
     fd.append('format', format);
     fd.append('file', outBlob, fname);
+
     const resp = await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('POST', '/api/upload');
@@ -739,8 +909,10 @@ G('btnSendTg').onclick = async () => {
       xhr.ontimeout = () => reject(new Error('Превышено время ожидания'));
       xhr.send(fd);
     });
-    hideAllStates();
+
+    sp.style.display = 'none';
     sr.style.display = 'flex'; sr.style.flexDirection = 'column';
+
     if (resp.sent) {
       G('rmeta').textContent = '✅ Видео отправлено в чат!';
       btn.textContent = '✓ Отправлено';
@@ -749,18 +921,61 @@ G('btnSendTg').onclick = async () => {
     } else {
       btn.disabled = false;
       btn.textContent = '📤 Отправить в Telegram';
-      showErr('Не удалось определить пользователя');
+      showErr('Не удалось определить пользователя Telegram');
     }
+
   } catch (e) {
-    hideAllStates();
+    sp.style.display = 'none';
     sr.style.display = 'flex'; sr.style.flexDirection = 'column';
     showErr('Ошибка: ' + e.message);
     btn.disabled = false;
     btn.textContent = '📤 Отправить в Telegram';
   }
 };
+let resizeTimer;
+window.addEventListener('resize',()=>{
+  if(!videoDur) return;
+  updateSB();
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(generateFrames, 300);
+});
 
-// MERGE
+// ═════════════════════════════════════════════════════════════
+// НАВИГАЦИЯ + СКЛЕЙКА
+// ═════════════════════════════════════════════════════════════
+
+const stHome = document.getElementById('stateHome');
+const stMerge = document.getElementById('stateMerge');
+
+function hideAllStates() {
+  [stHome, su, se, sp, sr, stMerge].forEach(el => { if(el) el.style.display = 'none'; });
+}
+function showBack(show) { G('btnBack').style.display = show ? 'block' : 'none'; }
+
+function goHome() {
+  hideAllStates();
+  stHome.style.display = 'flex';
+  showBack(false);
+  fInp.value = ''; videoFile = null; outBlob = null; videoEl.src = ''; sbFrames.innerHTML = '';
+  mFile1 = null; mFile2 = null;
+  G('mergeInput1').value = ''; G('mergeInput2').value = '';
+  updateMergeUI();
+}
+
+G('modeCut').onclick = () => { hideAllStates(); su.style.display = ''; showBack(true); };
+G('modeMerge').onclick = () => { hideAllStates(); stMerge.style.display = 'flex'; stMerge.style.flexDirection = 'column'; showBack(true); };
+G('btnBack').onclick = goHome;
+G('logoHome').onclick = e => { e.preventDefault(); goHome(); };
+
+// Override "Начать заново" кнопку чтобы идти домой
+const origBtnNew = G('btnNew').onclick;
+G('btnNew').onclick = goHome;
+
+G('btnChange').onclick = () => { hideAllStates(); su.style.display = ''; };
+
+// ═════════ MERGE ═════════
+let mFile1 = null, mFile2 = null, mFormat = 'mp4';
+
 G('mSlot1').onclick = () => { if(!mFile1) G('mergeInput1').click(); };
 G('mSlot2').onclick = () => { if(!mFile2) G('mergeInput2').click(); };
 G('mRem1').onclick = e => { e.stopPropagation(); mFile1=null; G('mergeInput1').value=''; updateMergeUI(); };
@@ -772,6 +987,7 @@ document.querySelectorAll('[data-mfmt]').forEach(b => b.onclick = () => {
   document.querySelectorAll('[data-mfmt]').forEach(x => x.classList.remove('on'));
   b.classList.add('on'); mFormat = b.dataset.mfmt;
 });
+
 function updateMergeUI() {
   const s1el=G('mSlot1'), s2el=G('mSlot2');
   if(mFile1){ s1el.classList.add('has-file'); G('mLabel1').textContent=mFile1.name; G('mInfo1').textContent=fmtSz(mFile1.size); }
@@ -780,97 +996,142 @@ function updateMergeUI() {
   else{ s2el.classList.remove('has-file'); G('mLabel2').textContent='Выберите второе видео'; G('mInfo2').textContent=''; }
   G('btnMerge').disabled = !(mFile1 && mFile2);
 }
-function safeSeek(video,time) {
+
+function safeSeek(video, time) {
   return new Promise(resolve => {
-    if(Math.abs(video.currentTime-time)<.05) return resolve();
-    const h=()=>{video.removeEventListener('seeked',h);resolve();};
-    video.addEventListener('seeked',h);
-    video.currentTime=time;
-    setTimeout(()=>{video.removeEventListener('seeked',h);resolve();},2000);
+    if (Math.abs(video.currentTime - time) < 0.05) return resolve();
+    const h = () => { video.removeEventListener('seeked', h); resolve(); };
+    video.addEventListener('seeked', h);
+    video.currentTime = time;
+    setTimeout(() => { video.removeEventListener('seeked', h); resolve(); }, 2000);
   });
 }
+
 G('btnMerge').onclick = async () => {
-  if(!mFile1||!mFile2) return;
-  hideAllStates(); sp.style.display='flex'; sp.style.flexDirection='column';
-  G('pfill').style.width='0%'; G('ppct').textContent='0%';
-  G('ptitle').textContent='Склеиваем видео...'; G('psub').textContent='Подготовка';
+  if(!mFile1 || !mFile2) return;
+  hideAllStates();
+  sp.style.display = 'flex'; sp.style.flexDirection = 'column';
+  G('pfill').style.width = '0%'; G('ppct').textContent = '0%';
+  G('ptitle').textContent = 'Склеиваем видео...';
+  G('psub').textContent = 'Подготовка';
+
   try {
-    const mimeType=getBestMime(mFormat);
+    const mimeType = getBestMime(mFormat);
     if(!mimeType) throw new Error('Формат не поддерживается. Выберите WEBM.');
-    const v1=document.createElement('video');
-    const v2=document.createElement('video');
-    v1.playsInline=v2.playsInline=true;
-    v1.muted=v2.muted=true;
-    v1.src=URL.createObjectURL(mFile1);
-    v2.src=URL.createObjectURL(mFile2);
+
+    const v1 = document.createElement('video');
+    const v2 = document.createElement('video');
+    v1.playsInline = v2.playsInline = true;
+    v1.muted = v2.muted = true;
+    v1.src = URL.createObjectURL(mFile1);
+    v2.src = URL.createObjectURL(mFile2);
     await Promise.all([
-      new Promise((r,j)=>{v1.onloadedmetadata=r;v1.onerror=()=>j(new Error('Ошибка первого видео'));}),
-      new Promise((r,j)=>{v2.onloadedmetadata=r;v2.onerror=()=>j(new Error('Ошибка второго видео'));}),
+      new Promise((r,j) => { v1.onloadedmetadata = r; v1.onerror = () => j(new Error('Ошибка первого видео')); }),
+      new Promise((r,j) => { v2.onloadedmetadata = r; v2.onerror = () => j(new Error('Ошибка второго видео')); }),
     ]);
-    const w=Math.max(v1.videoWidth||640,v2.videoWidth||640);
-    const h=Math.max(v1.videoHeight||360,v2.videoHeight||360);
-    const cv=document.createElement('canvas');cv.width=w;cv.height=h;
-    const ctx=cv.getContext('2d');
-    const dur1=v1.duration,dur2=v2.duration,totalDur=dur1+dur2;
-    const canvasStream=cv.captureStream(30);
-    const stream=new MediaStream(canvasStream.getTracks());
-    const chunks=[];
-    const rec=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:4e6});
-    rec.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
+
+    const w = Math.max(v1.videoWidth||640, v2.videoWidth||640);
+    const h = Math.max(v1.videoHeight||360, v2.videoHeight||360);
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    const ctx = cv.getContext('2d');
+    const dur1 = v1.duration, dur2 = v2.duration, totalDur = dur1 + dur2;
+
+    const canvasStream = cv.captureStream(30);
+    const stream = new MediaStream(canvasStream.getTracks());
+    const chunks = [];
+    const rec = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 4000000 });
+    rec.ondataavailable = e => { if(e.data.size > 0) chunks.push(e.data); };
+
     let resolveStop;
-    const recStopped=new Promise(r=>{resolveStop=r;});
-    rec.addEventListener('stop',()=>resolveStop(),{once:true});
-    let rafId,currentVid=v1;
-    function drawFrame(){
-      ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);
-      try{const vw=currentVid.videoWidth||w,vh=currentVid.videoHeight||h;const scale=Math.min(w/vw,h/vh);ctx.drawImage(currentVid,(w-vw*scale)/2,(h-vh*scale)/2,vw*scale,vh*scale);}catch(e){}
-      rafId=requestAnimationFrame(drawFrame);
+    const recStopped = new Promise(r => { resolveStop = r; });
+    rec.addEventListener('stop', () => resolveStop(), { once: true });
+
+    let rafId, currentVid = v1;
+
+    function drawFrame() {
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
+      try {
+        const vw = currentVid.videoWidth || w, vh = currentVid.videoHeight || h;
+        const scale = Math.min(w/vw, h/vh);
+        ctx.drawImage(currentVid, (w-vw*scale)/2, (h-vh*scale)/2, vw*scale, vh*scale);
+      } catch(e) {}
+      rafId = requestAnimationFrame(drawFrame);
     }
-    G('psub').textContent='Первое видео...';
-    await safeSeek(v1,0);
+
+    G('psub').textContent = 'Первое видео...';
+    await safeSeek(v1, 0);
     rec.start(200);
     drawFrame();
     v1.play();
-    await new Promise(resolve=>{
-      function tick(){const pct=Math.min(49,(v1.currentTime/totalDur)*100);G('pfill').style.width=pct+'%';G('ppct').textContent=Math.round(pct)+'%';if(v1.ended||v1.currentTime>=dur1-.05){v1.pause();resolve();}else setTimeout(tick,120);}
-      v1.addEventListener('ended',()=>{v1.pause();resolve();},{once:true});
+
+    await new Promise(resolve => {
+      function tick() {
+        const pct = Math.min(49, (v1.currentTime / totalDur) * 100);
+        G('pfill').style.width = pct + '%'; G('ppct').textContent = Math.round(pct) + '%';
+        if (v1.ended || v1.currentTime >= dur1 - 0.05) { v1.pause(); resolve(); }
+        else setTimeout(tick, 120);
+      }
+      v1.addEventListener('ended', () => { v1.pause(); resolve(); }, { once: true });
       tick();
     });
-    G('pfill').style.width='50%';G('ppct').textContent='50%';
-    G('psub').textContent='Второе видео...';
-    currentVid=v2;
-    await safeSeek(v2,0);
+    G('pfill').style.width = '50%'; G('ppct').textContent = '50%';
+
+    G('psub').textContent = 'Второе видео...';
+    currentVid = v2;
+    await safeSeek(v2, 0);
     v2.play();
-    await new Promise(resolve=>{
-      function tick(){const pct=50+Math.min(49,(v2.currentTime/totalDur)*100);G('pfill').style.width=pct+'%';G('ppct').textContent=Math.round(pct)+'%';if(v2.ended||v2.currentTime>=dur2-.05){v2.pause();resolve();}else setTimeout(tick,120);}
-      v2.addEventListener('ended',()=>{v2.pause();resolve();},{once:true});
+
+    await new Promise(resolve => {
+      function tick() {
+        const pct = 50 + Math.min(49, (v2.currentTime / totalDur) * 100);
+        G('pfill').style.width = pct + '%'; G('ppct').textContent = Math.round(pct) + '%';
+        if (v2.ended || v2.currentTime >= dur2 - 0.05) { v2.pause(); resolve(); }
+        else setTimeout(tick, 120);
+      }
+      v2.addEventListener('ended', () => { v2.pause(); resolve(); }, { once: true });
       tick();
     });
-    G('pfill').style.width='98%';G('ppct').textContent='98%';
-    G('psub').textContent='Финализация...';
+
+    G('pfill').style.width = '98%'; G('ppct').textContent = '98%';
+    G('psub').textContent = 'Финализация...';
+
     cancelAnimationFrame(rafId);
     rec.stop();
     await recStopped;
-    stream.getTracks().forEach(t=>t.stop());
+
+    stream.getTracks().forEach(t => t.stop());
     URL.revokeObjectURL(v1.src);
     URL.revokeObjectURL(v2.src);
-    const ext=mimeType.includes('mp4')?'mp4':'webm';
-    outBlob=new Blob(chunks,{type:mimeType});
-    if(outBlob.size<100) throw new Error('Результат пустой');
-    G('pfill').style.width='100%';G('ppct').textContent='100%';
-    setTimeout(()=>{hideAllStates();sr.style.display='flex';sr.style.flexDirection='column';
-      const tooBig=outBlob.size>4.4*1024*1024;
-      G('rmeta').textContent=fmtSz(outBlob.size)+' · '+fmtT(totalDur)+' · '+ext.toUpperCase();
-      const sendBtn=G('btnSendTg');
-      if(tooBig&&tgApp){sendBtn.disabled=true;sendBtn.style.opacity='0.5';sendBtn.textContent='⚠️ Слишком большое';}
-      else{sendBtn.disabled=false;sendBtn.style.opacity='1';sendBtn.style.background='#229ED9';sendBtn.textContent='📤 Отправить в Telegram';}
-      checkTgBtn();
-    },300);
-  } catch(e){ hideAllStates(); stMerge.style.display='flex'; stMerge.style.flexDirection='column'; showErr('Ошибка: '+e.message); }
-};
 
-let resizeTimer;
-window.addEventListener('resize',()=>{if(!videoDur) return; updateSB(); clearTimeout(resizeTimer); resizeTimer=setTimeout(generateFrames,300);});
+    const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+    outBlob = new Blob(chunks, { type: mimeType });
+    if (outBlob.size < 100) throw new Error('Результат пустой — попробуйте WEBM');
+
+    G('pfill').style.width = '100%'; G('ppct').textContent = '100%';
+    setTimeout(() => {
+      hideAllStates();
+      sr.style.display = 'flex'; sr.style.flexDirection = 'column';
+      const tooBig = outBlob.size > 4.4 * 1024 * 1024;
+      G('rmeta').textContent = fmtSz(outBlob.size) + ' · ' + fmtT(totalDur) + ' · ' + ext.toUpperCase();
+      const sendBtn = G('btnSendTg');
+      if (tooBig && tgApp) {
+        sendBtn.disabled = true; sendBtn.style.opacity = '0.5';
+        sendBtn.textContent = '⚠️ Слишком большое для Telegram';
+      } else {
+        sendBtn.disabled = false; sendBtn.style.opacity = '1';
+        sendBtn.style.background = '#229ED9';
+        sendBtn.textContent = '📤 Отправить в Telegram';
+      }
+      checkTgBtn();
+    }, 300);
+
+  } catch(e) {
+    hideAllStates();
+    stMerge.style.display = 'flex'; stMerge.style.flexDirection = 'column';
+    showErr('Ошибка: ' + e.message);
+  }
+};
 </script>
+
 </body>
 </html>
