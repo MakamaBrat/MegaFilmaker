@@ -1,47 +1,68 @@
-// api/webhook.js — Telegram Bot (только /start)
-// Чистый ESM — работает на Vercel
+// api/webhook.js — Telegram webhook (только команда /start)
+// Отправка видео теперь происходит в upload.js напрямую
+const https = require('https');
 
 export const config = { api: { bodyParser: true } };
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TG = `https://api.telegram.org/bot${TOKEN}`;
 
-async function tgCall(method, body) {
-  const r = await fetch(`${TG}/${method}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+function tgCall(method, body) {
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify(body);
+    const req = https.request({
+      hostname: 'api.telegram.org',
+      path: `/bot${TOKEN}/${method}`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+      },
+    }, res => {
+      let raw = '';
+      res.on('data', c => raw += c);
+      res.on('end', () => {
+        try { resolve(JSON.parse(raw)); } catch { resolve({}); }
+      });
+    });
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
   });
-  return r.json();
 }
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(200).json({ ok: true });
 
   const update = req.body;
+
   try {
     const msg = update?.message;
     if (!msg) return res.status(200).json({ ok: true });
 
     const chatId = msg.chat.id;
 
+    // ── /start ──
     if (msg.text === '/start') {
-      // APP_URL ставится в env на Vercel, или берём из VERCEL_URL
-      const host = process.env.APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
-      const appUrl = host || 'https://your-app.vercel.app'; // замени на свой URL
+      const host = process.env.VERCEL_URL || process.env.APP_URL;
+      const appUrl = host ? `https://${host}` : 'https://mega-filmaker.vercel.app';
+
+      console.log(`[webhook] /start от ${chatId}, URL: ${appUrl}`);
 
       await tgCall('sendMessage', {
         chat_id: chatId,
-        text: '✂️ Привет! Нажми кнопку ниже, чтобы открыть видеоредактор.\n\nОбрезай, поворачивай, меняй скорость — и получай готовое видео прямо в чат!',
+        text: '✂️ Привет! Нажми кнопку ниже, чтобы открыть редактор видео.\n\nОбрезай, поворачивай, меняй скорость — и получай готовое видео прямо в чат!',
         reply_markup: {
-          keyboard: [[{ text: '✂️ Открыть ВидеоРез', web_app: { url: appUrl } }]],
-          resize_keyboard: true,
-          persistent: true,
+          inline_keyboard: [[{
+            text: '✂️ Открыть ВидеоРез',
+            web_app: { url: appUrl },
+          }]],
         },
       });
+      return res.status(200).json({ ok: true });
     }
+
   } catch (e) {
-    console.error('[webhook] Error:', e.message);
+    console.error('[webhook] Ошибка:', e.message);
   }
 
   return res.status(200).json({ ok: true });
